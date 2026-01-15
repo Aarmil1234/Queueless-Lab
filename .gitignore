@@ -1,0 +1,68 @@
+# ================================
+# Node.js
+# ================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+*.log
+
+# ================================
+# Environment variables
+# ================================
+.env
+.env.*
+!.env.example
+
+# ================================
+# Build outputs
+# ================================
+dist/
+build/
+out/
+coverage/
+
+# ================================
+# TypeScript
+# ================================
+*.tsbuildinfo
+
+# ================================
+# Angular
+# ================================
+.angular/
+.cache/
+.angular/cache/
+tmp/
+temp/
+
+# ================================
+# IDE / Editor
+# ================================
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# ================================
+# OS files
+# ================================
+.DS_Store
+Thumbs.db
+
+# ================================
+# Database / uploads
+# ================================
+data/
+uploads/
+storage/
+
+# ================================
+# Docker
+# ================================
+docker-data/
