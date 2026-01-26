@@ -8,7 +8,7 @@ const addPatient = async (req, res) => {
         const { patientName, gender, dateOfBirth, age, referredByDoctor, doctorContactNo, address, mobileNumber, tests } = req.body;
         const patientData = {
            patientName,
-           gender,
+           gender,  
            dateOfBirth,
            age,
            referredByDoctor,

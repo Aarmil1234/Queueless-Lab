@@ -49,9 +49,28 @@ async function addDefaultParameterRange(req, res) {
     try {
         const sanitizedData = sanitizeDefaultParameterRange(req.body);
         const response = await addDefaultParameterRangeDb(sanitizedData);
-        return sendResponse(req, res, response.statusCode, response.clientMessage);
+        
+        // If the response has a statusCode, it's an error response
+        if (response.statusCode && response.statusCode >= 400) {
+            return sendResponse(req, res, response.statusCode, {
+                success: false,
+                message: response.message || 'An error occurred',
+                ...(response.error && { error: response.error })
+            });
+        }
+        
+        return sendResponse(req, res, response.statusCode || 201, {
+            success: true,
+            message: 'Parameter range created successfully',
+            data: response.data
+        });
     } catch (error) {
-        return errorResponse(res, error.message);
+        console.error('Error in addDefaultParameterRange:', error);
+        return sendResponse(req, res, 500, {
+            success: false,
+            message: 'Internal server error',
+            ...(process.env.NODE_ENV === 'development' && { error: error.message })
+        });
     }
 }
 

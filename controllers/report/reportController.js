@@ -44,7 +44,6 @@ const addPatientReport = async (req, res) => {
 const getPatientReport = async (req, res) => {
     try {
         const patientId = req.params;
-
     } catch (error) {
 
     }

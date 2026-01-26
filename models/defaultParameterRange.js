@@ -35,9 +35,9 @@ const defaultParameterRange = new mongoose.Schema({
         enum: ['year', 'month'],
         default: 'year'
     },
-    delete : {
+    delete: {
         type: Boolean,
-        default : false
+        default: false
     }
 }, {
     timestamps: {
@@ -57,12 +57,10 @@ defaultParameterRange.index(
     { unique: true }
 );
 
-// Add a pre-save hook to validate that ageTo is greater than ageFrom when not null
-defaultParameterRange.pre('save', function (next) {
+defaultParameterRange.pre('save', async function () {
     if (this.ageTo !== null && this.ageTo <= this.ageFrom) {
         throw new Error('ageTo must be greater than ageFrom');
     }
-    next();
 });
 
 const DefaultParameterRange = mongoose.model('DefaultParameterRange', defaultParameterRange);

@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const patientSchema = new Schema({
-    caseId : {
+    caseId: {
         type: String,
         required: [true, 'Case ID is required'],
         trim: true
@@ -26,6 +26,11 @@ const patientSchema = new Schema({
         required: [true, 'Age is required'],
         min: [0, 'Age cannot be negative']
     },
+    ageType: {
+        type: String,
+        enum: ['month', 'year'],
+        default: 'year'
+    },
     referredByDoctor: {
         type: String,
         required: [true, 'Referred by doctor is required'],
@@ -46,9 +51,9 @@ const patientSchema = new Schema({
         required: [true, 'Mobile number is required'],
         trim: true
     },
-    tests : {
-        type : Array,
-        default : []
+    tests: {
+        type: Array,
+        default: []
     },
     isActive: {
         type: Boolean,

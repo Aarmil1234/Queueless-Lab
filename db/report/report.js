@@ -46,23 +46,62 @@ const addPatientReportDb = async (data) => {
 
 async function getAllPatientReportDB() {
     try {
-        // Find all patients with their test arrays
-        const patients = await Patient.find({ 'tests': { $exists: true, $not: { $size: 0 } } });
+        // First, get all reports with non-empty testReport
+        const reports = await Report.find({
+            // Match documents where testReport exists and is not empty
+            $and: [
+                { testReport: { $exists: true } },
+                { testReport: { $ne: new Map() } }
+            ]
+        }).lean();
 
-        // Process each patient's tests
-        const allTestResults = patients.flatMap(patient => {
-            return patient.tests.map(test => ({
-                patientId: patient._id.toString(),
+        // Get all unique patient IDs
+        const patientIds = [...new Set(reports.map(r => r.patientId))];
+
+        // Get all patients in a single query
+        const patients = await Patient.find({
+            _id: { $in: patientIds }
+        });
+
+        // Create a map of patientId to patient details for quick lookup
+        const patientMap = new Map();
+        patients.forEach(patient => {
+            patientMap.set(patient._id.toString(), {
+                patientId: patient._id,
                 patientName: patient.patientName,
                 mobileNumber: patient.mobileNumber,
-                caseId: patient.caseId,
-                testName: test
-            }));
+                referredBy: patient.referredByDoctor
+            });
+        });
+
+        // Combine the data
+        const result = reports.map(report => {
+            // Convert testReport Map to object if it's a Map
+            let testReport = {};
+            if (report.testReport && report.testReport instanceof Map) {
+                testReport = Object.fromEntries(report.testReport);
+            } else if (report.testReport) {
+                testReport = report.testReport;
+            }
+
+            return {
+                _id: report._id.toString(),
+                patientId: report.patientId.toString(),
+                testReport: testReport,
+                createdAt: report.createdAt,
+                updatedAt: report.updatedAt,
+                __v: report.__v,
+                patientDetails: patientMap.get(report.patientId.toString()) || {
+                    patientName: 'Unknown',
+                    mobileNumber: 'N/A',
+                    referredBy: 'N/A'
+                }
+            };
         });
 
         return {
             ...Responses.success,
-            data: allTestResults
+            data: result
         };
     } catch (error) {
         console.error('Error in getAllPatientReportDB:', error);
@@ -73,11 +112,51 @@ async function getAllPatientReportDB() {
     }
 }
 
-async function getReportByIdDB(reportId){
+async function getReportByIdDB(reportId) {
     try {
         const report = await Report.findById(reportId);
-        return report;
+
+        if (!report) {
+            return [];
+        }
+
+        // Fetch patient details including referredByDoctor
+        const patient = await Patient.findById(report.patientId);
+
+        if (!patient) {
+            return [];
+        }
+
+        // Get the report as a plain object
+        const reportObject = report.toObject();
+
+        // Convert the testReport Map to a plain object if it exists
+        let testReport = {};
+        if (reportObject.testReport && reportObject.testReport instanceof Map) {
+            testReport = Object.fromEntries(reportObject.testReport);
+        } else if (reportObject.testReport) {
+            // If it's already an object, use it as is
+            testReport = reportObject.testReport;
+        }
+
+        // Create a new object with properly serialized fields
+        const result = {
+            _id: reportObject._id.toString(),
+            patientId: reportObject.patientId.toString(),
+            testReport: testReport,  // Now properly handling both Map and plain object cases
+            createdAt: reportObject.createdAt,
+            updatedAt: reportObject.updatedAt,
+            __v: reportObject.__v,
+            patientDetails: {
+                patientName: patient.patientName,
+                mobileNumber: patient.mobileNumber,
+                referredBy: patient.referredByDoctor
+            }
+        };
+
+        return result;
     } catch (error) {
+        console.error('Error in getReportByIdDB:', error);
         return [];
     }
 }
