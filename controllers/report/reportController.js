@@ -1,42 +1,29 @@
 const { sendResponse } = require("../../utils/sendResponse");
-const { addPatientReportDb, getAllPatientReportDB, getReportByIdDB } = require("../../db/report/report");
+const { addPatientReportDb, getAllPatientReportDB, getReportByIdDB, getTestsListForReportDb } = require("../../db/report/report");
 
 const addPatientReport = async (req, res) => {
     try {
-        const { patientId } = req.params;
-        const { testName, testResult } = req.body;
+        const { reportId, testId, testResult } = req.body;
 
-        if (!testName || testResult === undefined) {
+        if (!testId || typeof testResult !== "object") {
             return sendResponse(req, res, 400, {
                 success: false,
-                message: 'testName and testResult are required'
+                message: 'testId and testResult (object) are required'
             });
         }
 
         const result = await addPatientReportDb({
-            patientId,
-            testName,
+            reportId,
+            testId,
             testResult
         });
 
-        if (result.statusCode) {
-            return sendResponse(req, res, 200, {
-                success: true,
-                message: 'Test result added successfully',
-                data: result.data
-            });
-        } else {
-            return sendResponse(req, res, 500, {
-                success: false,
-                message: result.error || 'Failed to add test result'
-            });
-        }
+        return sendResponse(req, res, result.statusCode, result.data);
+
     } catch (error) {
-        console.error('Error in addPatientReport:', error);
         return sendResponse(req, res, 500, {
             success: false,
-            message: 'Internal server error',
-            error: error.message
+            message: error.message
         });
     }
 };
@@ -74,9 +61,23 @@ async function getReportById(req, res) {
     }
 }
 
+async function getTestsListReport(req, res) {
+    try {
+        const { patientId } = req.params;
+        const result = await getTestsListForReportDb(patientId);
+        return sendResponse(req, res, 200, result);
+    } catch (error) {
+        return sendResponse(req, res, 500, {
+            success: false,
+            message: error.message
+        });
+    }
+}
+
 module.exports = {
     addPatientReport,
     getPatientReport,
     getAllPatientReport,
-    getReportById
+    getReportById,
+    getTestsListReport
 };

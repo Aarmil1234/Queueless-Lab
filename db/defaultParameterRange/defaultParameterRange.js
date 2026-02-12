@@ -10,6 +10,15 @@ async function getAllDefaultParameterRangeDb() {
     }
 }
 
+async function getAllParameterRangesDb() {
+    try {
+        const parameters = await DefaultParameterRange.find({ delete: false }).sort({ create: -1 });
+        return parameters;
+    } catch (error) {
+        return [];
+    }
+}
+
 async function getDefaultParameterRangeByParameterIdDb(parameterId) {
     try {
         const parameterRanges = await DefaultParameterRange.find({ parameterId: parameterId, delete: false }).sort({ create: -1 });

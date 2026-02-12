@@ -49,7 +49,7 @@ async function addDefaultParameterRange(req, res) {
     try {
         const sanitizedData = sanitizeDefaultParameterRange(req.body);
         const response = await addDefaultParameterRangeDb(sanitizedData);
-        
+
         // If the response has a statusCode, it's an error response
         if (response.statusCode && response.statusCode >= 400) {
             return sendResponse(req, res, response.statusCode, {
@@ -58,7 +58,7 @@ async function addDefaultParameterRange(req, res) {
                 ...(response.error && { error: response.error })
             });
         }
-        
+
         return sendResponse(req, res, response.statusCode || 201, {
             success: true,
             message: 'Parameter range created successfully',
@@ -90,6 +90,18 @@ async function getAllParameterRangesByParameterId(req, res) {
     try {
         const { parameterId } = req.params;
         const response = await getDefaultParameterRangeByParameterIdDb(parameterId);
+        return response.length > 0
+            ? sendResponse(req, res, 200, response)
+            : sendResponse(req, res, 404, "No parameter ranges found for this parameter");
+    } catch (error) {
+        return sendResponse(req, res, 500, error.message);
+    }
+}
+
+async function getAllParameterRanges(req, res) {
+    try {
+        const { parameterId } = req.params;
+        const response = await getAllParameterRangesDb(parameterId);
         return response.length > 0
             ? sendResponse(req, res, 200, response)
             : sendResponse(req, res, 404, "No parameter ranges found for this parameter");

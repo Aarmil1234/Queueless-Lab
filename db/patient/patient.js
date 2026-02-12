@@ -11,7 +11,22 @@ const addPatientDb = async (data) => {
         const caseId = "CASE-" + Math.floor(Math.random() * 1000000);
         const patient = new Patient({ caseId, patientName, gender, dateOfBirth, age, referredByDoctor, doctorContactNo, address, mobileNumber, tests });
         await patient.save();
-        return Responses.success;
+        return {
+            ...Responses.created,
+            data: {
+                id: patient._id,
+                caseId: patient.caseId,
+                patientName: patient.patientName,
+                gender: patient.gender,
+                dateOfBirth: patient.dateOfBirth,
+                age: patient.age,
+                referredByDoctor: patient.referredByDoctor,
+                doctorContactNo: patient.doctorContactNo,
+                address: patient.address,
+                mobileNumber: patient.mobileNumber,
+                tests: patient.tests
+            }
+        };
     } catch (error) {
         console.error(error);
         return Responses.tryAgain;

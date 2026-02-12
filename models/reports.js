@@ -1,6 +1,21 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
+const testEntrySchema = new Schema({
+    testName: {
+        type: String,
+        required: true
+    },
+    testResult: {
+        type: Map,
+        of: Schema.Types.Mixed,   // allows dynamic parameters
+        required: true,
+        default: {}
+    }
+}, {
+    timestamps: true
+});
+
 const reportSchema = new Schema({
     patientId: {
         type: String,
@@ -8,13 +23,12 @@ const reportSchema = new Schema({
         index: true
     },
     testReport: {
-        type: Map,
-        of: Schema.Types.Mixed,
-        default: {}
+        type: [testEntrySchema],
+        default: []
     }
 }, {
     timestamps: true,
-    minimize: false  // Ensures empty objects are stored
+    minimize: false
 });
 
 const Report = mongoose.model('Report', reportSchema);

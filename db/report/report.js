@@ -4,41 +4,41 @@ const Patient = require("../../models/patient");
 
 const addPatientReportDb = async (data) => {
     try {
-        const { patientId, testName, testResult } = data;
+        const { reportId, testId, testResult } = data;
 
-        // Find existing report for the patient
-        let report = await Report.findOne({ patientId });
+        // Find the existing report by reportId
+        let report = await Report.findById(reportId);
 
         if (!report) {
-            // If no report exists, create a new one with a Map
-            report = new Report({
-                patientId,
-                testReport: new Map()
-            });
+            return {
+                success: false,
+                message: 'Report not found'
+            };
         }
 
-        // Convert testReport to a Map if it's not already
-        if (!(report.testReport instanceof Map)) {
-            report.testReport = new Map(Object.entries(report.testReport || {}));
+        // Convert object to Map
+        const resultMap = new Map(Object.entries(testResult));
+
+        // Find the test with matching testId and update its testResult
+        const testToUpdate = report.testReport.find(test => test._id.toString() === testId);
+
+        if (testToUpdate) {
+            testToUpdate.testResult = resultMap;
+        } else {
+            return Responses.notFound;
         }
 
-        // Set the test result in the Map
-        report.testReport.set(testName, testResult);
-
-        // Convert the Map back to an object for storage
-        report.testReport = Object.fromEntries(report.testReport);
-
-        // Save the updated report
         await report.save();
 
         return {
             ...Responses.success,
             data: report
         };
+
     } catch (error) {
         console.error('Error in addPatientReportDb:', error);
         return {
-            ...Responses.tryAlso,
+            success: false,
             error: error.message
         };
     }
@@ -161,8 +161,54 @@ async function getReportByIdDB(reportId) {
     }
 }
 
+async function getTestsListForReportDb(patientId) {
+    try {
+        // Find the report by reportId
+        const report = await Report.findOne({ patientId });
+
+        if (!report) {
+            return [];
+        }
+
+        // Fetch patient details
+        const patient = await Patient.findById(report.patientId);
+
+        if (!patient) {
+            return [];
+        }
+
+        // Extract test list with id and name from testReport array
+        const testsList = report.testReport.map((test, index) => ({
+            id: test._id ? test._id.toString() : index.toString(),
+            name: test.testName
+        }));
+
+        // Return the result with patient details in parent object
+        const result = {
+            reportId: report.id,
+            patientDetails: {
+                patientId: patient._id.toString(),
+                patientName: patient.patientName,
+                mobileNumber: patient.mobileNumber,
+                referredBy: patient.referredByDoctor,
+                gender: patient.gender,
+                age: patient.age,
+                ageType: patient.ageType,
+                address: patient.address
+            },
+            testsList: testsList
+        };
+
+        return result;
+    } catch (error) {
+        console.error('Error in getTestsListForReportDb:', error);
+        return [];
+    }
+}
+
 module.exports = {
     addPatientReportDb,
     getAllPatientReportDB,
-    getReportByIdDB
+    getReportByIdDB,
+    getTestsListForReportDb
 };

@@ -5,6 +5,7 @@ const dashboardController = require("../../controllers/dashboard/dashboardContro
 router.get('/doctorWisePatient', dashboardController.doctorWisePatient);
 router.get('/totalPatientCount', dashboardController.totalPatientCount);
 router.get('/testWisePatient', dashboardController.testWisePatient);
+router.get('/weeklyReportData', dashboardController.weeklyReportData)
 
 
 module.exports = router;

@@ -72,8 +72,82 @@ async function testWisePatientDb() {
     }
 }
 
+async function weeklyReportDataDb() {
+    try {
+        const today = new Date();
+
+        // Get current day index (0=Sun, 1=Mon, ...)
+        const dayIndex = today.getDay();
+
+        // Calculate Monday of current week
+        const diffToMonday = dayIndex === 0 ? -6 : 1 - dayIndex;
+
+        const monday = new Date(today);
+        monday.setDate(today.getDate() + diffToMonday);
+        monday.setHours(0, 0, 0, 0);
+
+        // Today end time
+        const endOfToday = new Date();
+        endOfToday.setHours(23, 59, 59, 999);
+
+        // Aggregate report count grouped by day
+        const result = await Report.aggregate([
+            {
+                $match: {
+                    createdAt: {
+                        $gte: monday,
+                        $lte: endOfToday
+                    }
+                }
+            },
+            {
+                $group: {
+                    _id: { $dayOfWeek: "$createdAt" },
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        // Initialize all days Monday → Sunday as 0
+        const response = {
+            monday: 0,
+            tuesday: 0,
+            wednesday: 0,
+            thursday: 0,
+            friday: 0,
+            saturday: 0,
+            sunday: 0
+        };
+
+        // Mongo $dayOfWeek returns:
+        // 1=Sunday, 2=Monday, ... 7=Saturday
+        const dayMap = {
+            1: "sunday",
+            2: "monday",
+            3: "tuesday",
+            4: "wednesday",
+            5: "thursday",
+            6: "friday",
+            7: "saturday"
+        };
+
+        result.forEach(item => {
+            const dayName = dayMap[item._id];
+            if (response[dayName] !== undefined) {
+                response[dayName] = item.count;
+            }
+        });
+
+        return response;
+    } catch (error) {
+        console.error(error);
+        return [];
+    }
+}
+
 module.exports = {
     doctorWisePatientDb,
     getTotalPatientCount,
-    testWisePatientDb
+    testWisePatientDb,
+    weeklyReportDataDb
 };
