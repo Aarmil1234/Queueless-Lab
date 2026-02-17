@@ -6,9 +6,10 @@ const testEntrySchema = new Schema({
         type: String,
         required: true
     },
+    isReportSubmitted: { type : Boolean, required: true, default : false},
     testResult: {
         type: Map,
-        of: Schema.Types.Mixed,   // allows dynamic parameters
+        of: Schema.Types.Mixed,
         required: true,
         default: {}
     }

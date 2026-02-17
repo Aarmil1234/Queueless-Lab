@@ -63,8 +63,8 @@ async function getReportById(req, res) {
 
 async function getTestsListReport(req, res) {
     try {
-        const { patientId } = req.params;
-        const result = await getTestsListForReportDb(patientId);
+        const { patientId, status } = req.params;
+        const result = await getTestsListForReportDb(patientId, status);
         return sendResponse(req, res, 200, result);
     } catch (error) {
         return sendResponse(req, res, 500, {

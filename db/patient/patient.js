@@ -3,6 +3,7 @@ const { executeQuery } = require("../db");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const Patient = require("../../models/patient");
+const Report = require("../../models/reports");
 
 const addPatientDb = async (data) => {
     try {
@@ -33,6 +34,92 @@ const addPatientDb = async (data) => {
     }
 };
 
+const getAllPatientDb = async () => {
+    try {
+        const patients = await Patient.find({});
+        return patients;
+    } catch (error) {
+        console.error('Error in getAllPatientDb:', error);
+        return [];
+    }
+}
+
+const getPatientsWithPendingReportsDb = async () => {
+    try {
+
+        // Find reports that have at least one test with isReportSubmitted = false
+        const reportsWithPendingTests = await Report.find({
+            'testReport.isReportSubmitted': false
+        }).select('patientId id');
+
+        // Extract unique patient IDs and create a map of patientId to reportIds
+        const patientIds = [...new Set(reportsWithPendingTests.map(report => report.patientId))];
+        const patientReportMap = {};
+        
+        reportsWithPendingTests.forEach(report => {
+            if (!patientReportMap[report.patientId]) {
+                patientReportMap[report.patientId] = [];
+            }
+            patientReportMap[report.patientId].push(report.id);
+        });
+
+        // Find patients with those IDs
+        const patients = await Patient.find({
+            '_id': { $in: patientIds }
+        });
+
+        // Add reportIds to each patient
+        const patientsWithReportIds = patients.map(patient => ({
+            ...patient.toObject(),
+            reportIds: patientReportMap[patient._id] || []
+        }));
+
+        return patientsWithReportIds;
+    } catch (error) {
+        console.error('Error in getPatientsWithPendingReportsDb:', error);
+        return [];
+    }
+}
+
+const getPatientsWithSubmittedReportsDb = async () => {
+    try {
+
+        const reportsWithSubmittedTests = await Report.find({
+            'testReport.isReportSubmitted': true
+        }).select('patientId id');
+
+        // Extract unique patient IDs and create a map of patientId to reportIds
+        const patientIds = [...new Set(reportsWithSubmittedTests.map(report => report.patientId))];
+        const patientReportMap = {};
+        
+        reportsWithSubmittedTests.forEach(report => {
+            if (!patientReportMap[report.patientId]) {
+                patientReportMap[report.patientId] = [];
+            }
+            patientReportMap[report.patientId].push(report.id);
+        });
+
+        // Find patients with those IDs
+        const patients = await Patient.find({
+            '_id': { $in: patientIds }
+        });
+
+        // Add reportIds to each patient
+        const patientsWithReportIds = patients.map(patient => ({
+            ...patient.toObject(),
+            reportIds: patientReportMap[patient._id] || []
+        }));
+
+        return patientsWithReportIds;
+    } catch (error) {
+        console.error('Error in getPatientsWithSubmittedReportsDb:', error);
+        return [];
+    }
+}
+
 module.exports = {
-    addPatientDb
+    addPatientDb,
+    getAllPatientDb,
+    getPatientsWithPendingReportsDb,
+    getPatientsWithSubmittedReportsDb
 };

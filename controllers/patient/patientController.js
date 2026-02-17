@@ -1,6 +1,6 @@
 
 const { sendResponse } = require("../../utils/sendResponse");
-const { addPatientDb } = require("../../db/patient/patient");
+const { addPatientDb, getAllPatientDb, getPatientsWithPendingReportsDb, getPatientsWithSubmittedReportsDb } = require("../../db/patient/patient");
 const reportModel = require("../../models/reports");
 
 //create login with email and password and jwt token
@@ -47,6 +47,36 @@ const addPatient = async (req, res) => {
     }
 };
 
+const getAllPatient = async (req, res) => {
+    try {
+        const result = await getAllPatientDb();
+        return sendResponse(req, res, 200, result);
+    } catch (error) {
+        return sendResponse(req, res, 500, { Message: error.message });
+    }
+}
+
+const getPatientsWithPendingReports = async (req, res) => {
+    try {
+        const result = await getPatientsWithPendingReportsDb();
+        return sendResponse(req, res, 200, result);
+    } catch (error) {
+        return sendResponse(req, res, 500, { Message: error.message });
+    }
+}
+
+const getPatientsWithSubmittedReports = async (req, res) => {
+    try {
+        const result = await getPatientsWithSubmittedReportsDb();
+        return sendResponse(req, res, 200, result);
+    } catch (error) {
+        return sendResponse(req, res, 500, { Message: error.message });
+    }
+}
+
 module.exports = {
-    addPatient
+    addPatient,
+    getAllPatient,
+    getPatientsWithPendingReports,
+    getPatientsWithSubmittedReports
 };

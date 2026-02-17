@@ -24,6 +24,7 @@ const addPatientReportDb = async (data) => {
 
         if (testToUpdate) {
             testToUpdate.testResult = resultMap;
+            testToUpdate.isReportSubmitted = true;
         } else {
             return Responses.notFound;
         }
@@ -161,7 +162,7 @@ async function getReportByIdDB(reportId) {
     }
 }
 
-async function getTestsListForReportDb(patientId) {
+async function getTestsListForReportDb(patientId, status) {
     try {
         // Find the report by reportId
         const report = await Report.findOne({ patientId });
@@ -177,8 +178,17 @@ async function getTestsListForReportDb(patientId) {
             return [];
         }
 
-        // Extract test list with id and name from testReport array
-        const testsList = report.testReport.map((test, index) => ({
+        // Filter tests based on status
+        let filteredTests = report.testReport;
+        
+        if (status === 'pending') {
+            filteredTests = report.testReport.filter(test => test.isReportSubmitted === false);
+        } else if (status === 'submitted') {
+            filteredTests = report.testReport.filter(test => test.isReportSubmitted === true);
+        }
+
+        // Extract test list with id and name from filtered testReport array
+        const testsList = filteredTests.map((test, index) => ({
             id: test._id ? test._id.toString() : index.toString(),
             name: test.testName
         }));
