@@ -13,8 +13,8 @@ const addPatientDb = async (data) => {
         const existingPatient = await Patient.findOne({ mobileNumber });
         if (existingPatient) {
             return {
-                ...Responses.badRequest,
-                message: "Patient with this mobile number already exists"
+                ...Responses.success,
+                data: existingPatient
             };
         }
 
