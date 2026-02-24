@@ -1,7 +1,7 @@
 
 const { sendResponse } = require("../../utils/sendResponse");
 const { addPatientDb, getAllPatientDb, getPatientsWithPendingReportsDb, getPatientsWithSubmittedReportsDb } = require("../../db/patient/patient");
-const reportModel = require("../../models/reports");
+const { createNewReportDb } = require("../../db/report/report");
 
 //create login with email and password and jwt token
 const addPatient = async (req, res) => {
@@ -19,8 +19,7 @@ const addPatient = async (req, res) => {
             tests
         }
         const response = await addPatientDb(patientData);
-
-        if (!response.statusCode) {
+        if (response.statusCode !== 200) {
             return sendResponse(req, res, response.statusCode, response.message);
         }
 
@@ -28,16 +27,7 @@ const addPatient = async (req, res) => {
 
         // 2️⃣ Create Report Automatically
         if (Array.isArray(tests) && tests.length > 0) {
-
-            const formattedTests = tests.map(testName => ({
-                testName,
-                testResult: {}  // empty result
-            }));
-
-            await reportModel.create({
-                patientId: createdPatient.id,
-                testReport: formattedTests
-            });
+            await createNewReportDb(createdPatient.id, tests);
         }
 
         return sendResponse(req, res, response.statusCode, response.message);

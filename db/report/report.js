@@ -162,40 +162,79 @@ async function getReportByIdDB(reportId) {
     }
 }
 
+async function createNewReportDb(patientId, tests) {
+    try {
+        // Create formatted tests array if tests are provided
+        let testReport = [];
+        if (Array.isArray(tests) && tests.length > 0) {
+            testReport = tests.map(testName => ({
+                testName: typeof testName === 'string' ? testName : testName.testName,
+                testResult: {}
+            }));
+        }
+
+        const report = new Report({
+            patientId,
+            testReport
+        });
+
+        await report.save();
+
+        return {
+            ...Responses.created,
+            data: report
+        };
+    } catch (error) {
+        console.error('Error in createNewReportDb:', error);
+        return {
+            ...Responses.tryAgain,
+            error: error.message
+        };
+    }
+}
+
 async function getTestsListForReportDb(patientId, status) {
     try {
-        // Find the report by reportId
-        const report = await Report.findOne({ patientId });
+        // Find all reports by patientId
+        const reports = await Report.find({ patientId });
 
-        if (!report) {
+        if (!reports || reports.length === 0) {
             return [];
         }
 
-        // Fetch patient details
-        const patient = await Patient.findById(report.patientId);
+        // Fetch patient details (using first report's patientId)
+        const patient = await Patient.findById(reports[0].patientId);
 
         if (!patient) {
             return [];
         }
 
-        // Filter tests based on status
-        let filteredTests = report.testReport;
-        
-        if (status === 'pending') {
-            filteredTests = report.testReport.filter(test => test.isReportSubmitted === false);
-        } else if (status === 'submitted') {
-            filteredTests = report.testReport.filter(test => test.isReportSubmitted === true);
-        }
+        // Collect all tests from all reports
+        let allTests = [];
 
-        // Extract test list with id and name from filtered testReport array
-        const testsList = filteredTests.map((test, index) => ({
-            id: test._id ? test._id.toString() : index.toString(),
-            name: test.testName
-        }));
+        // Process each report
+        reports.forEach(report => {
+            let filteredTests = report.testReport;
+            
+            if (status === 'pending') {
+                filteredTests = report.testReport.filter(test => test.isReportSubmitted === false);
+            } else if (status === 'submitted') {
+                filteredTests = report.testReport.filter(test => test.isReportSubmitted === true);
+            }
+
+            // Add tests from this report with reportId and report date
+            const testsFromThisReport = filteredTests.map(test => ({
+                id: test._id ? test._id.toString() : null,
+                name: test.testName,
+                reportId: report._id.toString(),
+                reportDate: report.createdAt
+            }));
+
+            allTests = allTests.concat(testsFromThisReport);
+        });
 
         // Return the result with patient details in parent object
         const result = {
-            reportId: report.id,
             patientDetails: {
                 patientId: patient._id.toString(),
                 patientName: patient.patientName,
@@ -206,7 +245,7 @@ async function getTestsListForReportDb(patientId, status) {
                 ageType: patient.ageType,
                 address: patient.address
             },
-            testsList: testsList
+            testsList: allTests
         };
 
         return result;
@@ -220,5 +259,6 @@ module.exports = {
     addPatientReportDb,
     getAllPatientReportDB,
     getReportByIdDB,
-    getTestsListForReportDb
+    getTestsListForReportDb,
+    createNewReportDb
 };

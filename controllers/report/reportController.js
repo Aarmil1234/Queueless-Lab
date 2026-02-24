@@ -1,5 +1,20 @@
 const { sendResponse } = require("../../utils/sendResponse");
-const { addPatientReportDb, getAllPatientReportDB, getReportByIdDB, getTestsListForReportDb } = require("../../db/report/report");
+const { addPatientReportDb, getAllPatientReportDB, getReportByIdDB, getTestsListForReportDb, createNewReportDb } = require("../../db/report/report");
+
+const createNewReport = async (req, res) => {
+    try {
+        const { patientId, tests } = req.body;
+        
+        const result = await createNewReportDb(patientId, tests);
+        
+        return sendResponse(req, res, result.statusCode, result.data);
+    } catch (error) {
+        return sendResponse(req, res, 500, {
+            success: false,
+            message: error.message
+        });
+    }
+}
 
 const addPatientReport = async (req, res) => {
     try {
@@ -75,6 +90,7 @@ async function getTestsListReport(req, res) {
 }
 
 module.exports = {
+    createNewReport,
     addPatientReport,
     getPatientReport,
     getAllPatientReport,

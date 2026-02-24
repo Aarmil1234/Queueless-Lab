@@ -7,7 +7,17 @@ const Report = require("../../models/reports");
 
 const addPatientDb = async (data) => {
     try {
+
         let { patientName, gender, dateOfBirth, age, referredByDoctor, doctorContactNo, address, mobileNumber, tests } = data;
+
+        const existingPatient = await Patient.findOne({ mobileNumber });
+        if (existingPatient) {
+            return {
+                ...Responses.badRequest,
+                message: "Patient with this mobile number already exists"
+            };
+        }
+
         //generate case id randonmly as of now
         const caseId = "CASE-" + Math.floor(Math.random() * 1000000);
         const patient = new Patient({ caseId, patientName, gender, dateOfBirth, age, referredByDoctor, doctorContactNo, address, mobileNumber, tests });

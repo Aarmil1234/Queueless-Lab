@@ -5,7 +5,8 @@ const patientSchema = new Schema({
     caseId: {
         type: String,
         required: [true, 'Case ID is required'],
-        trim: true
+        trim: true,
+        unique: true
     },
     patientName: {
         type: String,
@@ -49,7 +50,8 @@ const patientSchema = new Schema({
     mobileNumber: {
         type: String,
         required: [true, 'Mobile number is required'],
-        trim: true
+        trim: true,
+        unique: true
     },
     tests: {
         type: Array,
