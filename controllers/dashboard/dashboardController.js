@@ -1,6 +1,6 @@
 
 const { sendResponse } = require("../../utils/sendResponse");
-const { doctorWisePatientDb, getTotalPatientCount, testWisePatientDb, weeklyReportDataDb } = require("../../db/dashboard/dashboard")
+const { doctorWisePatientDb, getTotalPatientCount, testWisePatientDb, weeklyReportDataDb, cityWiseReportDataDb } = require("../../db/dashboard/dashboard")
 
 async function doctorWisePatient(req, res) {
     try {
@@ -34,12 +34,7 @@ async function totalPatientCount(req, res) {
 async function testWisePatient(req, res) {
     try {
         const count = await testWisePatientDb();
-        return sendResponse(req, res, 200, {
-            success: true,
-            data: {
-                totalPatients: count
-            }
-        });
+        return sendResponse(req, res, 200, count);
     } catch (error) {
         return sendResponse(req, res, 500, {
             success: false,
@@ -57,9 +52,22 @@ async function weeklyReportData(req, res) {
     }
 }
 
+async function cityWiseReportData(req, res) {
+    try {
+        const count = await cityWiseReportDataDb();
+        return sendResponse(req, res, 200, count);
+    } catch (error) {
+        return sendResponse(req, res, 500, {
+            success: false,
+            message: error.message
+        });
+    }
+}
+
 module.exports = {
     doctorWisePatient,
     totalPatientCount,
     testWisePatient,
-    weeklyReportData
+    weeklyReportData,
+    cityWiseReportData
 };

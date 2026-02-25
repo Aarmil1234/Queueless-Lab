@@ -44,15 +44,10 @@ async function getTotalPatientCount() {
 async function testWisePatientDb() {
     try {
         const result = await Report.aggregate([
-            {
-                $project: {
-                    testNames: { $objectToArray: '$testReport' }
-                }
-            },
-            { $unwind: '$testNames' },
+            { $unwind: '$testReport' },
             {
                 $group: {
-                    _id: '$testNames.k',
+                    _id: '$testReport.testName',
                     patientCount: { $sum: 1 }
                 }
             },
@@ -145,9 +140,51 @@ async function weeklyReportDataDb() {
     }
 }
 
+async function cityWiseReportDataDb() {
+    try {
+        const result = await Report.aggregate([
+            {
+                $addFields: {
+                    patientObjectId: { $toObjectId: "$patientId" }
+                }
+            },
+            {
+                $lookup: {
+                    from: 'patients',
+                    localField: 'patientObjectId',
+                    foreignField: '_id',
+                    as: 'patientInfo'
+                }
+            },
+            {
+                $unwind: '$patientInfo'
+            },
+            {
+                $group: {
+                    _id: '$patientInfo.city',
+                    reportCount: { $sum: 1 }
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    city: '$_id',
+                    reportCount: 1
+                }
+            },
+            { $sort: { reportCount: -1 } }
+        ]);
+        return result;
+    } catch (error) {
+        console.error('Error in cityWiseReportDataDb:', error);
+        return [];
+    }
+}
+
 module.exports = {
     doctorWisePatientDb,
     getTotalPatientCount,
     testWisePatientDb,
-    weeklyReportDataDb
+    weeklyReportDataDb,
+    cityWiseReportDataDb
 };

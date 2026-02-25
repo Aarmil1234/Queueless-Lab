@@ -47,6 +47,11 @@ const patientSchema = new Schema({
         required: [true, 'Address is required'],
         trim: true
     },
+    city: {
+        type: String,
+        required: [true, 'City is required'],
+        trim: true
+    },
     mobileNumber: {
         type: String,
         required: [true, 'Mobile number is required'],

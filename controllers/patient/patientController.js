@@ -3,10 +3,9 @@ const { sendResponse } = require("../../utils/sendResponse");
 const { addPatientDb, getAllPatientDb, getPatientsWithPendingReportsDb, getPatientsWithSubmittedReportsDb } = require("../../db/patient/patient");
 const { createNewReportDb } = require("../../db/report/report");
 
-//create login with email and password and jwt token
 const addPatient = async (req, res) => {
     try {
-        const { patientName, gender, dateOfBirth, age, referredByDoctor, doctorContactNo, address, mobileNumber, tests } = req.body;
+        const { patientName, gender, dateOfBirth, age, referredByDoctor, doctorContactNo, address, city, mobileNumber, tests } = req.body;
         const patientData = {
             patientName,
             gender,
@@ -15,6 +14,7 @@ const addPatient = async (req, res) => {
             referredByDoctor,
             doctorContactNo,
             address,
+            city,
             mobileNumber,
             tests
         }
@@ -25,9 +25,9 @@ const addPatient = async (req, res) => {
 
         const createdPatient = response.data;
 
-        // 2️⃣ Create Report Automatically
+        let responseForReport;
         if (Array.isArray(tests) && tests.length > 0) {
-            await createNewReportDb(createdPatient.id, tests);
+            responseForReport = await createNewReportDb(createdPatient.id, tests);
         }
 
         return sendResponse(req, res, response.statusCode, response.message);
