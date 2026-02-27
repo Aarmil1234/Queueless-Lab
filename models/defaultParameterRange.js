@@ -32,7 +32,7 @@ const defaultParameterRange = new mongoose.Schema({
     },
     ageType: {
         type: String,
-        enum: ['year', 'month'],
+        enum: ['year', 'month', 'day'],
         default: 'year'
     },
     delete: {
