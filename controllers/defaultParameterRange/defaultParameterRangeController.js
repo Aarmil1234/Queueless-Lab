@@ -6,10 +6,16 @@ const {
     getSingleParameterRangeByIdDb,
     deleteDefaultParameterRangeDb
 } = require("../../db/defaultParameterRange/defaultParameterRange");
+const DefaultParameterRange = require('../../models/defaultParameterRange');
 
 const sanitizeDefaultParameterRange = (payload = {}) => {
     const sanitized = {
         ...(payload.parameterId && { parameterId: payload.parameterId }),
+
+        ...(payload.subCategory !== undefined && {
+            subCategory: payload.subCategory ? String(payload.subCategory).trim() : null
+        }),
+
         ...(payload.gender && {
             gender: String(payload.gender).toUpperCase()
         }),
@@ -48,6 +54,7 @@ const sanitizeDefaultParameterRange = (payload = {}) => {
 async function addDefaultParameterRange(req, res) {
     try {
         const sanitizedData = sanitizeDefaultParameterRange(req.body);
+
         const response = await addDefaultParameterRangeDb(sanitizedData);
 
         // If the response has a statusCode, it's an error response

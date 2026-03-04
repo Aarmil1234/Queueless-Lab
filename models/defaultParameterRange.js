@@ -7,6 +7,11 @@ const defaultParameterRange = new mongoose.Schema({
         ref: 'Parameter',
         required: true
     },
+    subCategory: {
+        type: String,
+        default: null, // null means no subcategory
+        trim: true
+    },
     gender: {
         type: String,
         enum: ['MALE', 'FEMALE', 'BOTH'],
@@ -51,15 +56,29 @@ defaultParameterRange.index({ parameterId: 1 });
 defaultParameterRange.index({ gender: 1 });
 defaultParameterRange.index({ ageFrom: 1, ageTo: 1 });
 
-// Add a compound index for unique constraint
 defaultParameterRange.index(
     { parameterId: 1, gender: 1, ageFrom: 1, ageTo: 1 },
-    { unique: true }
+    {
+        unique: true,
+        partialFilterExpression: { subCategory: null }
+    }
 );
 
-defaultParameterRange.pre('save', async function () {
+defaultParameterRange.index(
+    { parameterId: 1, subCategory: 1, gender: 1, ageFrom: 1, ageTo: 1 },
+    {
+        unique: true,
+        partialFilterExpression: { subCategory: { $type: "string" } }
+    }
+);
+
+defaultParameterRange.pre('save', function () {
     if (this.ageTo !== null && this.ageTo <= this.ageFrom) {
         throw new Error('ageTo must be greater than ageFrom');
+    }
+
+    if (this.minValue > this.maxValue) {
+        throw new Error('minValue cannot be greater than maxValue');
     }
 });
 
