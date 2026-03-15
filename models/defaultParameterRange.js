@@ -1,78 +1,84 @@
-// /models/defaultReferenceRangeModel.js
+// /models/defaultParameterRangeModel.js
 const mongoose = require('mongoose');
 
-const defaultParameterRange = new mongoose.Schema({
+const defaultParameterRangeSchema = new mongoose.Schema({
+
     parameterId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Parameter',
         required: true
     },
-    subCategory: {
-        type: String,
-        default: null, // null means no subcategory
-        trim: true
+
+    subCategoryId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'ParameterSubCategory',
+        default: null
     },
+
     gender: {
         type: String,
         enum: ['MALE', 'FEMALE', 'BOTH'],
         required: true
     },
+
     ageFrom: {
-        type: Number,  // in years
+        type: Number,
         required: true,
         min: 0
     },
+
     ageTo: {
-        type: Number,  // in years
-        default: null, // null means 18+
+        type: Number,
+        default: null,
         min: 0
     },
-    minValue: {
-        type: Number,
-        required: true
-    },
-    maxValue: {
-        type: Number,
-        required: true
-    },
+
     ageType: {
         type: String,
         enum: ['year', 'month', 'day'],
         default: 'year'
     },
+
+    minValue: {
+        type: Number,
+        required: true
+    },
+
+    maxValue: {
+        type: Number,
+        required: true
+    },
+
     delete: {
         type: Boolean,
         default: false
     }
+
 }, {
-    timestamps: {
-        createdAt: 'createdAt',
-        updatedAt: 'updatedAt'
-    }
+    timestamps: true
 });
 
-// Add indexes for faster lookups
-defaultParameterRange.index({ parameterId: 1 });
-defaultParameterRange.index({ gender: 1 });
-defaultParameterRange.index({ ageFrom: 1, ageTo: 1 });
 
-defaultParameterRange.index(
-    { parameterId: 1, gender: 1, ageFrom: 1, ageTo: 1 },
+// Basic indexes
+defaultParameterRangeSchema.index({ parameterId: 1 });
+defaultParameterRangeSchema.index({ subCategoryId: 1 });
+defaultParameterRangeSchema.index({ gender: 1 });
+defaultParameterRangeSchema.index({ ageFrom: 1, ageTo: 1 });
+
+
+// Unique range constraint
+defaultParameterRangeSchema.index(
+    { parameterId: 1, subCategoryId: 1, gender: 1, ageFrom: 1, ageTo: 1 },
     {
         unique: true,
-        partialFilterExpression: { subCategory: null }
+        partialFilterExpression: { delete: false }
     }
 );
 
-defaultParameterRange.index(
-    { parameterId: 1, subCategory: 1, gender: 1, ageFrom: 1, ageTo: 1 },
-    {
-        unique: true,
-        partialFilterExpression: { subCategory: { $type: "string" } }
-    }
-);
 
-defaultParameterRange.pre('save', function () {
+// Validations
+defaultParameterRangeSchema.pre('save', function () {
+
     if (this.ageTo !== null && this.ageTo <= this.ageFrom) {
         throw new Error('ageTo must be greater than ageFrom');
     }
@@ -80,18 +86,13 @@ defaultParameterRange.pre('save', function () {
     if (this.minValue > this.maxValue) {
         throw new Error('minValue cannot be greater than maxValue');
     }
+
 });
 
-const DefaultParameterRange = mongoose.model('DefaultParameterRange', defaultParameterRange);
+
+const DefaultParameterRange = mongoose.model(
+    'DefaultParameterRange',
+    defaultParameterRangeSchema
+);
 
 module.exports = DefaultParameterRange;
-
-
-// {
-//   "parameterId": "HB_ID",
-//   "gender": "MALE",
-//   "ageFrom": 18,
-//   "ageTo": null,
-//   "minValue": 13,
-//   "maxValue": 17
-// }

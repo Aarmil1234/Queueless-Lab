@@ -12,8 +12,8 @@ const sanitizeDefaultParameterRange = (payload = {}) => {
     const sanitized = {
         ...(payload.parameterId && { parameterId: payload.parameterId }),
 
-        ...(payload.subCategory !== undefined && {
-            subCategory: payload.subCategory ? String(payload.subCategory).trim() : null
+        ...(payload.subCategoryId !== undefined && {
+            subCategoryId: payload.subCategoryId ? String(payload.subCategoryId).trim() : null
         }),
 
         ...(payload.gender && {

@@ -44,7 +44,12 @@ async function addDefaultParameterRangeDb(data) {
         await parameterRange.save();
         return Responses.success;
     } catch (error) {
-        return Responses.tryAgain;
+        console.error('Error adding default parameter range:', error);
+        return {
+            success: false,
+            message: error.message || 'Failed to add parameter range',
+            error: error
+        };
     }
 }
 
