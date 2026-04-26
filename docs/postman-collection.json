@@ -1,0 +1,506 @@
+{
+	"info": {
+		"_postman_id": "queueless-lab-api",
+		"name": "Queueless Lab API - Complete Flow",
+		"description": "Complete API flow for lab report system from signup to report creation",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Lab Signup",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"labName\": \"City Diagnostic Center\",\n  \"email\": \"city@diagnostic.com\",\n  \"password\": \"securePassword123\",\n  \"phone\": \"+1234567890\",\n  \"address\": \"123 Main Street, City\",\n  \"city\": \"New York\",\n  \"state\": \"NY\",\n  \"country\": \"USA\",\n  \"licenseNumber\": \"LAB-123456\",\n  \"registrationNumber\": \"REG-789012\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/lab/signup",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"lab",
+						"signup"
+					]
+				},
+				"description": "Register a new lab in the system"
+			},
+			"response": []
+		},
+		{
+			"name": "2. Lab Login",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email\": \"city@diagnostic.com\",\n  \"password\": \"securePassword123\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/lab/login",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"lab",
+						"login"
+					]
+				},
+				"description": "Login to get authentication token"
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 200) {",
+							"    const response = pm.response.json();",
+							"    if (response.data && response.data.token) {",
+							"        pm.environment.set(\"token\", response.data.token);",
+							"        pm.environment.set(\"labId\", response.data.lab._id);",
+							"        console.log('Token saved:', response.data.token);",
+							"    }",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"response": []
+		},
+		{
+			"name": "3. Add Parameters",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"parameters\": [\n    {\n      \"code\": \"HB\",\n      \"name\": \"Hemoglobin\",\n      \"category\": \"CBC\",\n      \"type\": \"NUMERIC\",\n      \"unit\": \"g/dL\",\n      \"isActive\": true\n    },\n    {\n      \"code\": \"WBC\",\n      \"name\": \"White Blood Cells\",\n      \"category\": \"CBC\",\n      \"type\": \"NUMERIC\",\n      \"unit\": \"cells/μL\",\n      \"isActive\": true\n    },\n    {\n      \"code\": \"RBC\",\n      \"name\": \"Red Blood Cells\",\n      \"category\": \"CBC\",\n      \"type\": \"NUMERIC\",\n      \"unit\": \"million cells/μL\",\n      \"isActive\": true\n    },\n    {\n      \"code\": \"PLATELETS\",\n      \"name\": \"Platelets\",\n      \"category\": \"CBC\",\n      \"type\": \"NUMERIC\",\n      \"unit\": \"thousands/μL\",\n      \"isActive\": true\n    },\n    {\n      \"code\": \"GLU\",\n      \"name\": \"Glucose\",\n      \"category\": \"Biochemistry\",\n      \"type\": \"NUMERIC\",\n      \"unit\": \"mg/dL\",\n      \"isActive\": true\n    }\n  ]\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/parameter/create",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"parameter",
+						"create"
+					]
+				},
+				"description": "Add parameters that can be used in tests"
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 200 || pm.response.code === 201) {",
+							"    const response = pm.response.json();",
+							"    if (response.data && response.data.length > 0) {",
+							"        // Save parameter IDs for later use",
+							"        const hemoglobin = response.data.find(p => p.code === 'HB');",
+							"        const wbc = response.data.find(p => p.code === 'WBC');",
+							"        const rbc = response.data.find(p => p.code === 'RBC');",
+							"        const platelets = response.data.find(p => p.code === 'PLATELETS');",
+							"        const glucose = response.data.find(p => p.code === 'GLU');",
+							"        ",
+							"        if (hemoglobin) pm.environment.set(\"hemoglobinId\", hemoglobin._id);",
+							"        if (wbc) pm.environment.set(\"wbcId\", wbc._id);",
+							"        if (rbc) pm.environment.set(\"rbcId\", rbc._id);",
+							"        if (platelets) pm.environment.set(\"plateletsId\", platelets._id);",
+							"        if (glucose) pm.environment.set(\"glucoseId\", glucose._id);",
+							"    }",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"response": []
+		},
+		{
+			"name": "4. Add Parameter SubCategory",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"parameterId\": \"{{hemoglobinId}}\",\n  \"code\": \"HB_MALE\",\n  \"name\": \"Hemoglobin Male Range\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/parameterSubCategory/create",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"parameterSubCategory",
+						"create"
+					]
+				},
+				"description": "Add subcategory for hemoglobin (male range)"
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 200 || pm.response.code === 201) {",
+							"    const response = pm.response.json();",
+							"    if (response.data && response.data._id) {",
+							"        pm.environment.set(\"hbMaleSubcategoryId\", response.data._id);",
+							"    }",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"response": []
+		},
+		{
+			"name": "5. Create Test",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"testName\": \"Complete Blood Count\",\n  \"testCode\": \"CBC_FULL\",\n  \"category\": \"Hematology\",\n  \"parameters\": [\n    \"{{hemoglobinId}}\",\n    \"{{wbcId}}\",\n    \"{{rbcId}}\",\n    \"{{plateletsId}}\"\n  ]\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/test/create",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"test",
+						"create"
+					]
+				},
+				"description": "Create a test with multiple parameters"
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 200 || pm.response.code === 201) {",
+							"    const response = pm.response.json();",
+							"    if (response.data && response.data._id) {",
+							"        pm.environment.set(\"testId\", response.data._id);",
+							"        console.log('Test ID saved:', response.data._id);",
+							"    }",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"response": []
+		},
+		{
+			"name": "6. Add Patient",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"caseId\": \"PAT-2024-001\",\n  \"patientName\": \"John Doe\",\n  \"gender\": \"Male\",\n  \"dateOfBirth\": \"1990-05-15\",\n  \"age\": 34,\n  \"ageType\": \"year\",\n  \"referredByDoctor\": \"Dr. Smith\",\n  \"doctorContactNo\": \"+1234567890\",\n  \"mobileNumber\": \"+0987654321\",\n  \"address\": \"456 Oak Avenue\",\n  \"city\": \"New York\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/patient/create",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"patient",
+						"create"
+					]
+				},
+				"description": "Register a new patient"
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 200 || pm.response.code === 201) {",
+							"    const response = pm.response.json();",
+							"    if (response.data && response.data._id) {",
+							"        pm.environment.set(\"patientId\", response.data._id);",
+							"        console.log('Patient ID saved:', response.data._id);",
+							"    }",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"response": []
+		},
+		{
+			"name": "7. Create Report",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"patientId\": \"{{patientId}}\",\n  \"labId\": \"{{labId}}\",\n  \"tests\": [\n    {\n      \"testName\": \"Complete Blood Count\",\n      \"testId\": \"{{testId}}\"\n    }\n  ]\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/report/create",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"report",
+						"create"
+					]
+				},
+				"description": "Create a new report for patient"
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 200 || pm.response.code === 201) {",
+							"    const response = pm.response.json();",
+							"    if (response.data && response.data._id) {",
+							"        pm.environment.set(\"reportId\", response.data._id);",
+							"        // Also save the test entry ID for adding results",
+							"        if (response.data.testReport && response.data.testReport[0]) {",
+							"            pm.environment.set(\"testEntryId\", response.data.testReport[0]._id);",
+							"        }",
+							"        console.log('Report ID saved:', response.data._id);",
+							"    }",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"response": []
+		},
+		{
+			"name": "8A. Add Results - Traditional Format",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"reportId\": \"{{reportId}}\",\n  \"testId\": \"{{testEntryId}}\",\n  \"labId\": \"{{labId}}\",\n  \"testResult\": {\n    \"hemoglobin\": \"14.5\",\n    \"wbc\": \"7500\",\n    \"rbc\": \"4.8\",\n    \"platelets\": \"250\"\n  }\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/report/add",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"report",
+						"add"
+					]
+				},
+				"description": "Add test results using traditional format (backward compatible)"
+			},
+			"response": []
+		},
+		{
+			"name": "8B. Add Results - Dynamic Format",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"reportId\": \"{{reportId}}\",\n  \"testId\": \"{{testEntryId}}\",\n  \"labId\": \"{{labId}}\",\n  \"testParameters\": [\n    {\n      \"parameterId\": \"{{hemoglobinId}}\",\n      \"subCategoryId\": \"{{hbMaleSubcategoryId}}\",\n      \"value\": \"14.5\",\n      \"status\": \"NORMAL\",\n      \"notes\": \"Within normal range for adult male\"\n    },\n    {\n      \"parameterId\": \"{{wbcId}}\",\n      \"value\": \"7500\",\n      \"status\": \"NORMAL\",\n      \"notes\": \"Normal white blood cell count\"\n    },\n    {\n      \"parameterId\": \"{{rbcId}}\",\n      \"value\": \"4.8\",\n      \"status\": \"NORMAL\",\n      \"notes\": \"Normal red blood cell count\"\n    },\n    {\n      \"parameterId\": \"{{plateletsId}}\",\n      \"value\": \"250\",\n      \"status\": \"NORMAL\",\n      \"notes\": \"Normal platelet count\"\n    }\n  ]\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/report/add",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"report",
+						"add"
+					]
+				},
+				"description": "Add test results using new dynamic format (recommended)"
+			},
+			"response": []
+		},
+		{
+			"name": "9. Get Report",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/report/{{reportId}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"report",
+						"{{reportId}}"
+					]
+				},
+				"description": "Get complete report with all details"
+			},
+			"response": []
+		},
+		{
+			"name": "Get All Tests",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/test/all",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"test",
+						"all"
+					]
+				},
+				"description": "Get all available tests"
+			},
+			"response": []
+		},
+		{
+			"name": "Get Test with Parameters",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/test/{{testId}}/parameters",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"test",
+						"{{testId}}",
+						"parameters"
+					]
+				},
+				"description": "Get test details with parameters and subcategories"
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000/api",
+			"type": "string"
+		}
+	]
+}

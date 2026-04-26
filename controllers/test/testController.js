@@ -1,5 +1,11 @@
 
 const { sendResponse } = require("../../utils/sendResponse");
+const {
+    createTestDb,
+    getAllTestsDb,
+    getTestByIdDb,
+    getTestParametersWithSubCategoriesDb
+} = require("../../db/test/testDb");
 
 //create login with email and password and jwt token
 const getAllTestList = async (req, res) => {
@@ -109,6 +115,102 @@ const getAllTestList = async (req, res) => {
     }
 };
 
+const createTest = async (req, res) => {
+    try {
+        const { testName, testCode, category, parameters } = req.body;
+
+        if (!testName || !testCode || !category) {
+            return sendResponse(req, res, 400, {
+                success: false,
+                message: 'testName, testCode, and category are required'
+            });
+        }
+
+        const result = await createTestDb({
+            testName,
+            testCode,
+            category,
+            parameters
+        });
+
+        if (result.statusCode && result.statusCode >= 400) {
+            return sendResponse(req, res, result.statusCode, {
+                success: false,
+                message: result.message || 'An error occurred'
+            });
+        }
+
+        return sendResponse(req, res, result.statusCode || 201, {
+            success: true,
+            message: 'Test created successfully',
+            data: result.data
+        });
+    } catch (error) {
+        return sendResponse(req, res, 500, {
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+const getAllTests = async (req, res) => {
+    try {
+        const result = await getAllTestsDb();
+        return sendResponse(req, res, 200, result.data);
+    } catch (error) {
+        return sendResponse(req, res, 500, {
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+const getTestById = async (req, res) => {
+    try {
+        const { testId } = req.params;
+        const result = await getTestByIdDb(testId);
+        
+        if (result.statusCode && result.statusCode >= 400) {
+            return sendResponse(req, res, result.statusCode, {
+                success: false,
+                message: result.message || 'Test not found'
+            });
+        }
+
+        return sendResponse(req, res, 200, result.data);
+    } catch (error) {
+        return sendResponse(req, res, 500, {
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+const getTestParametersWithSubCategories = async (req, res) => {
+    try {
+        const { testId } = req.params;
+        const result = await getTestParametersWithSubCategoriesDb(testId);
+        
+        if (result.statusCode && result.statusCode >= 400) {
+            return sendResponse(req, res, result.statusCode, {
+                success: false,
+                message: result.message || 'Test not found'
+            });
+        }
+
+        return sendResponse(req, res, 200, result.data);
+    } catch (error) {
+        return sendResponse(req, res, 500, {
+            success: false,
+            message: error.message
+        });
+    }
+};
+
 module.exports = {
-    getAllTestList
+    getAllTestList,
+    createTest,
+    getAllTests,
+    getTestById,
+    getTestParametersWithSubCategories
 };

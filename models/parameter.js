@@ -43,8 +43,7 @@ const parameterSchema = new mongoose.Schema({
     }
 });
 
-// Add index for faster lookups
-parameterSchema.index({ code: 1 }, { unique: true });
+// code index is already defined with unique: true in schema
 parameterSchema.index({ category: 1 });
 parameterSchema.index({ isActive: 1 });
 

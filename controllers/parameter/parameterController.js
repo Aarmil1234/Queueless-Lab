@@ -21,7 +21,7 @@ const sanitizeParameterPayload = (payload = {}) => ({
 async function addParameter(req, res) {
     try {
         const parameterData = sanitizeParameterPayload(req.body);
-        const response = await addParameterDb(parameterData);
+        const response =    await addParameterDb(parameterData);
         return sendResponse(req, res, response.statusCode, response.clientMessage);
     } catch (error) {
         return sendResponse(req, res, 500, error.message);

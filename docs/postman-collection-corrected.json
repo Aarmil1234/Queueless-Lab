@@ -1,0 +1,682 @@
+{
+	"info": {
+		"_postman_id": "queueless-lab-api-corrected",
+		"name": "Queueless Lab API - Corrected Flow",
+		"description": "Corrected API flow based on actual controllers and routes",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Lab Signup",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"labName\": \"City Diagnostic Center\",\n  \"ownerName\": \"John Smith\",\n  \"mobileNumber\": \"+1234567890\",\n  \"labMobileNumber\": \"+0987654321\",\n  \"email\": \"city@diagnostic.com\",\n  \"password\": \"securePassword123\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/auth/signup",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"auth",
+						"signup"
+					]
+				},
+				"description": "Register a new lab in the system"
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 201) {",
+							"    const response = pm.response.json();",
+							"    if (response.data && response.data.token) {",
+							"        pm.environment.set(\"token\", response.data.token);",
+							"        pm.environment.set(\"labId\", response.data.user.id);",
+							"        console.log('Token saved:', response.data.token);",
+							"    }",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"response": []
+		},
+		{
+			"name": "2. Lab Login",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"labMobileNumber\": \"+0987654321\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/auth/login",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"auth",
+						"login"
+					]
+				},
+				"description": "Login with lab mobile number to get authentication token"
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 200) {",
+							"    const response = pm.response.json();",
+							"    if (response.data && response.data.token) {",
+							"        pm.environment.set(\"token\", response.data.token);",
+							"        pm.environment.set(\"labId\", response.data.user.id);",
+							"        console.log('Token saved:', response.data.token);",
+							"    }",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"response": []
+		},
+		{
+			"name": "3. Add Parameter",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"code\": \"HB\",\n  \"name\": \"Hemoglobin\",\n  \"category\": \"CBC\",\n  \"type\": \"NUMERIC\",\n  \"unit\": \"g/dL\",\n  \"isActive\": true\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/parameter/add",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"parameter",
+						"add"
+					]
+				},
+				"description": "Add a single parameter"
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 200 || pm.response.code === 201) {",
+							"    const response = pm.response.json();",
+							"    if (response.data && response.data._id) {",
+							"        pm.environment.set(\"hemoglobinId\", response.data._id);",
+							"        console.log('Hemoglobin ID saved:', response.data._id);",
+							"    }",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"response": []
+		},
+		{
+			"name": "4. Add WBC Parameter",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"code\": \"WBC\",\n  \"name\": \"White Blood Cells\",\n  \"category\": \"CBC\",\n  \"type\": \"NUMERIC\",\n  \"unit\": \"cells/μL\",\n  \"isActive\": true\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/parameter/add",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"parameter",
+						"add"
+					]
+				},
+				"description": "Add WBC parameter"
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 200 || pm.response.code === 201) {",
+							"    const response = pm.response.json();",
+							"    if (response.data && response.data._id) {",
+							"        pm.environment.set(\"wbcId\", response.data._id);",
+							"        console.log('WBC ID saved:', response.data._id);",
+							"    }",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"response": []
+		},
+		{
+			"name": "5. Add RBC Parameter",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"code\": \"RBC\",\n  \"name\": \"Red Blood Cells\",\n  \"category\": \"CBC\",\n  \"type\": \"NUMERIC\",\n  \"unit\": \"million cells/μL\",\n  \"isActive\": true\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/parameter/add",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"parameter",
+						"add"
+					]
+				},
+				"description": "Add RBC parameter"
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 200 || pm.response.code === 201) {",
+							"    const response = pm.response.json();",
+							"    if (response.data && response.data._id) {",
+							"        pm.environment.set(\"rbcId\", response.data._id);",
+							"        console.log('RBC ID saved:', response.data._id);",
+							"    }",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"response": []
+		},
+		{
+			"name": "6. Add Parameter SubCategory",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"parameterId\": \"{{hemoglobinId}}\",\n  \"code\": \"HB_MALE\",\n  \"name\": \"Hemoglobin Male Range\",\n  \"isActive\": true\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/parameter/subCategory/add",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"parameter",
+						"subCategory",
+						"add"
+					]
+				},
+				"description": "Add subcategory for hemoglobin (male range)"
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 200 || pm.response.code === 201) {",
+							"    const response = pm.response.json();",
+							"    if (response.data && response.data._id) {",
+							"        pm.environment.set(\"hbMaleSubcategoryId\", response.data._id);",
+							"        console.log('HB Male SubCategory ID saved:', response.data._id);",
+							"    }",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"response": []
+		},
+		{
+			"name": "7. Create Test",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"testName\": \"Complete Blood Count\",\n  \"testCode\": \"CBC_FULL\",\n  \"category\": \"Hematology\",\n  \"parameters\": [\n    \"{{hemoglobinId}}\",\n    \"{{wbcId}}\",\n    \"{{rbcId}}\"\n  ]\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/test/create",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"test",
+						"create"
+					]
+				},
+				"description": "Create a test with multiple parameters"
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 200 || pm.response.code === 201) {",
+							"    const response = pm.response.json();",
+							"    if (response.data && response.data._id) {",
+							"        pm.environment.set(\"testId\", response.data._id);",
+							"        console.log('Test ID saved:', response.data._id);",
+							"    }",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"response": []
+		},
+		{
+			"name": "8. Add Patient",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"patientName\": \"John Doe\",\n  \"gender\": \"Male\",\n  \"dateOfBirth\": \"1990-05-15\",\n  \"age\": 34,\n  \"ageType\": \"year\",\n  \"referredByDoctor\": \"Dr. Smith\",\n  \"doctorContactNo\": \"+1234567890\",\n  \"address\": \"456 Oak Avenue\",\n  \"city\": \"New York\",\n  \"mobileNumber\": \"+0987654321\",\n  \"tests\": [\n    \"Complete Blood Count\"\n  ]\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/patient",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"patient"
+					]
+				},
+				"description": "Register a new patient"
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 200) {",
+							"    const response = pm.response.json();",
+							"    // Patient ID might be in response.data or response.message",
+							"    console.log('Patient created:', response);",
+							"    // You may need to manually set patientId from response",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"response": []
+		},
+		{
+			"name": "9. Create Report",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"patientId\": \"{{patientId}}\",\n  \"labId\": \"{{labId}}\",\n  \"tests\": [\n    {\n      \"testName\": \"Complete Blood Count\",\n      \"testId\": \"{{testId}}\"\n    }\n  ]\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/report/create",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"report",
+						"create"
+					]
+				},
+				"description": "Create a new report for patient"
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 200 || pm.response.code === 201) {",
+							"    const response = pm.response.json();",
+							"    if (response.data && response.data._id) {",
+							"        pm.environment.set(\"reportId\", response.data._id);",
+							"        // Also save the test entry ID for adding results",
+							"        if (response.data.testReport && response.data.testReport[0]) {",
+							"            pm.environment.set(\"testEntryId\", response.data.testReport[0]._id);",
+							"        }",
+							"        console.log('Report ID saved:', response.data._id);",
+							"    }",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"response": []
+		},
+		{
+			"name": "10. Add Report Results - Traditional Format",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"reportId\": \"{{reportId}}\",\n  \"testId\": \"{{testEntryId}}\",\n  \"labId\": \"{{labId}}\",\n  \"testResult\": {\n    \"hemoglobin\": \"14.5\",\n    \"wbc\": \"7500\",\n    \"rbc\": \"4.8\"\n  }\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/report/testWise",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"report",
+						"testWise"
+					]
+				},
+				"description": "Add test results using traditional format (backward compatible)"
+			},
+			"response": []
+		},
+		{
+			"name": "11. Add Report Results - Dynamic Format",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"reportId\": \"{{reportId}}\",\n  \"testId\": \"{{testEntryId}}\",\n  \"labId\": \"{{labId}}\",\n  \"testParameters\": [\n    {\n      \"parameterId\": \"{{hemoglobinId}}\",\n      \"subCategoryId\": \"{{hbMaleSubcategoryId}}\",\n      \"value\": \"14.5\",\n      \"status\": \"NORMAL\",\n      \"notes\": \"Within normal range for adult male\"\n    },\n    {\n      \"parameterId\": \"{{wbcId}}\",\n      \"value\": \"7500\",\n      \"status\": \"NORMAL\",\n      \"notes\": \"Normal white blood cell count\"\n    },\n    {\n      \"parameterId\": \"{{rbcId}}\",\n      \"value\": \"4.8\",\n      \"status\": \"NORMAL\",\n      \"notes\": \"Normal red blood cell count\"\n    }\n  ]\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/report/testWise",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"report",
+						"testWise"
+					]
+				},
+				"description": "Add test results using new dynamic format (recommended)"
+			},
+			"response": []
+		},
+		{
+			"name": "12. Get Report by ID",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/report/getSingleReport/{{reportId}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"report",
+						"getSingleReport",
+						"{{reportId}}"
+					]
+				},
+				"description": "Get complete report with all details"
+			},
+			"response": []
+		},
+		{
+			"name": "13. Get All Parameters",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/parameter",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"parameter"
+					]
+				},
+				"description": "Get all available parameters"
+			},
+			"response": []
+		},
+		{
+			"name": "14. Get Parameter SubCategories",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/parameter/subCategory/{{hemoglobinId}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"parameter",
+						"subCategory",
+						"{{hemoglobinId}}"
+					]
+				},
+				"description": "Get subcategories for a specific parameter"
+			},
+			"response": []
+		},
+		{
+			"name": "15. Get Test List",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/test",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"test"
+					]
+				},
+				"description": "Get legacy test list"
+			},
+			"response": []
+		},
+		{
+			"name": "16. Get All Patients",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/patient/getAllPatient",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"patient",
+						"getAllPatient"
+					]
+				},
+				"description": "Get all patients"
+			},
+			"response": []
+		},
+		{
+			"name": "17. Get All Reports",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/report",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"report"
+					]
+				},
+				"description": "Get all reports"
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000/api",
+			"type": "string"
+		}
+	]
+}

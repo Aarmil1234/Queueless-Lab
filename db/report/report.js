@@ -1,13 +1,16 @@
 const { Responses } = require("../../utils/responses");
 const Report = require("../../models/reports");
 const Patient = require("../../models/patient");
+const Parameter = require("../../models/parameter");
+const ParameterSubCategory = require("../../models/parameterSubCategoryModel");
+const Test = require("../../models/test");
 
 const addPatientReportDb = async (data) => {
     try {
-        const { reportId, testId, testResult } = data;
+        const { reportId, testId, testResult, labId, testParameters } = data;
 
-        // Find the existing report by reportId
-        let report = await Report.findById(reportId);
+        // Find the existing report by reportId and labId
+        let report = await Report.findOne({ _id: reportId, labId });
 
         if (!report) {
             return {
@@ -16,19 +19,62 @@ const addPatientReportDb = async (data) => {
             };
         }
 
-        // Convert object to Map
-        const resultMap = new Map(Object.entries(testResult));
-
-        // Find the test with matching testId and update its testResult
+        // Find the test with matching testId
         const testToUpdate = report.testReport.find(test => test._id.toString() === testId);
 
-        if (testToUpdate) {
-            testToUpdate.testResult = resultMap;
-            testToUpdate.isReportSubmitted = true;
-        } else {
-            return Responses.notFound;
+        if (!testToUpdate) {
+            return {
+                success: false,
+                message: 'Test not found in report'
+            };
         }
 
+        // Update traditional testResult for backward compatibility
+        if (testResult) {
+            const resultMap = new Map(Object.entries(testResult));
+            testToUpdate.testResult = resultMap;
+        }
+
+        // Update dynamic testParameters if provided
+        if (testParameters && Array.isArray(testParameters)) {
+            // Validate parameter IDs
+            const parameterIds = testParameters.map(tp => tp.parameterId);
+            const validParameters = await Parameter.find({
+                _id: { $in: parameterIds },
+                delete: false,
+                isActive: true
+            });
+
+            if (validParameters.length !== parameterIds.length) {
+                return {
+                    success: false,
+                    message: 'One or more parameters are invalid'
+                };
+            }
+
+            // Validate subcategory IDs if provided
+            for (const tp of testParameters) {
+                if (tp.subCategoryId) {
+                    const subCategory = await ParameterSubCategory.findOne({
+                        _id: tp.subCategoryId,
+                        parameterId: tp.parameterId,
+                        delete: false,
+                        isActive: true
+                    });
+
+                    if (!subCategory) {
+                        return {
+                            success: false,
+                            message: `Invalid subcategory for parameter ${tp.parameterId}`
+                        };
+                    }
+                }
+            }
+
+            testToUpdate.testParameters = testParameters;
+        }
+
+        testToUpdate.isReportSubmitted = true;
         await report.save();
 
         return {
@@ -45,10 +91,11 @@ const addPatientReportDb = async (data) => {
     }
 };
 
-async function getAllPatientReportDB() {
+async function getAllPatientReportDB(labId) {
     try {
-        // First, get all reports with non-empty testReport
+        // First, get all reports with non-empty testReport for specific lab
         const reports = await Report.find({
+            labId,
             // Match documents where testReport exists and is not empty
             $and: [
                 { testReport: { $exists: true } },
@@ -113,9 +160,9 @@ async function getAllPatientReportDB() {
     }
 }
 
-async function getReportByIdDB(reportId) {
+async function getReportByIdDB(reportId, labId) {
     try {
-        const report = await Report.findById(reportId);
+        const report = await Report.findOne({ _id: reportId, labId });
 
         if (!report) {
             return [];
@@ -162,19 +209,43 @@ async function getReportByIdDB(reportId) {
     }
 }
 
-async function createNewReportDb(patientId, tests) {
+async function createNewReportDb(patientId, tests, labId) {
     try {
         // Create formatted tests array if tests are provided
         let testReport = [];
         if (Array.isArray(tests) && tests.length > 0) {
-            testReport = tests.map(testName => ({
-                testName: typeof testName === 'string' ? testName : testName.testName,
-                testResult: {}
+            testReport = await Promise.all(tests.map(async (testItem) => {
+                const testName = typeof testItem === 'string' ? testItem : testItem.testName;
+                const testId = typeof testItem === 'object' && testItem.testId ? testItem.testId : null;
+                
+                let testParameters = [];
+                
+                // If testId is provided, fetch test parameters dynamically
+                if (testId) {
+                    const test = await Test.findById(testId).populate('parameters');
+                    if (test && test.parameters) {
+                        testParameters = test.parameters.map(param => ({
+                            parameterId: param._id,
+                            subCategoryId: null,
+                            value: null,
+                            status: 'PENDING',
+                            notes: ''
+                        }));
+                    }
+                }
+                
+                return {
+                    testName,
+                    testId,
+                    testResult: {}, // Keep for backward compatibility
+                    testParameters // New dynamic structure
+                };
             }));
         }
 
         const report = new Report({
             patientId,
+            labId,
             testReport
         });
 
@@ -193,10 +264,10 @@ async function createNewReportDb(patientId, tests) {
     }
 }
 
-async function getTestsListForReportDb(patientId, status) {
+async function getTestsListForReportDb(patientId, status, labId) {
     try {
-        // Find all reports by patientId
-        const reports = await Report.find({ patientId });
+        // Find all reports by patientId and labId
+        const reports = await Report.find({ patientId, labId });
 
         if (!reports || reports.length === 0) {
             return [];
