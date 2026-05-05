@@ -28,10 +28,37 @@ async function getDefaultParameterRangeByParameterIdDb(parameterId) {
     }
 }
 
+async function getDefaultParameterRangeByParameterAndSubCategoryDb(parameterId, subCategoryId) {
+    try {
+        const parameterRanges = await DefaultParameterRange.find({ 
+            parameterId: parameterId, 
+            subCategoryId: subCategoryId, 
+            delete: false 
+        }).sort({ create: -1 });
+        return parameterRanges;
+    } catch (error) {
+        return [];
+    }
+}
+
 async function getSingleParameterRangeByIdDb(id) {
     try {
         const parameterRange = await DefaultParameterRange.findById(id);
         return [parameterRange];
+    } catch (error) {
+        return [];
+    }
+}
+
+async function getSpecificParameterRangeByParameterSubCategoryAndRangeIdDb(parameterId, subCategoryId, parameterRangeId) {
+    try {
+        const parameterRange = await DefaultParameterRange.findOne({ 
+            parameterId: parameterId, 
+            subCategoryId: subCategoryId, 
+            _id: parameterRangeId,
+            delete: false 
+        });
+        return parameterRange ? [parameterRange] : [];
     } catch (error) {
         return [];
     }
@@ -89,7 +116,9 @@ async function deleteDefaultParameterRangeDb(id) {
 
 module.exports = {
     getDefaultParameterRangeByParameterIdDb,
+    getDefaultParameterRangeByParameterAndSubCategoryDb,
     getSingleParameterRangeByIdDb,
+    getSpecificParameterRangeByParameterSubCategoryAndRangeIdDb,
     addDefaultParameterRangeDb,
     updateDefaultParameterRangeDb,
     deleteDefaultParameterRangeDb,

@@ -2,9 +2,12 @@ const { sendResponse } = require("../../utils/sendResponse");
 const {
     addDefaultParameterRangeDb,
     getDefaultParameterRangeByParameterIdDb,
+    getDefaultParameterRangeByParameterAndSubCategoryDb,
     updateDefaultParameterRangeDb,
     getSingleParameterRangeByIdDb,
-    deleteDefaultParameterRangeDb
+    getSpecificParameterRangeByParameterSubCategoryAndRangeIdDb,
+    deleteDefaultParameterRangeDb,
+    getAllParameterRangesDb
 } = require("../../db/defaultParameterRange/defaultParameterRange");
 const DefaultParameterRange = require('../../models/defaultParameterRange');
 
@@ -105,6 +108,18 @@ async function getAllParameterRangesByParameterId(req, res) {
     }
 }
 
+async function getParameterRangesByParameterAndSubCategory(req, res) {
+    try {
+        const { parameterId, subCategoryId } = req.params;
+        const response = await getDefaultParameterRangeByParameterAndSubCategoryDb(parameterId, subCategoryId);
+        return response.length > 0
+            ? sendResponse(req, res, 200, response)
+            : sendResponse(req, res, 404, "No parameter ranges found for this parameter and subcategory");
+    } catch (error) {
+        return sendResponse(req, res, 500, error.message);
+    }
+}
+
 async function getAllParameterRanges(req, res) {
     try {
         const { parameterId } = req.params;
@@ -140,10 +155,24 @@ async function deleteParameterRange(req, res) {
     }
 }
 
+async function getSpecificParameterRangeByParameterSubCategoryAndRangeId(req, res) {
+    try {
+        const { parameterId, subCategoryId, parameterRangeId } = req.params;
+        const response = await getSpecificParameterRangeByParameterSubCategoryAndRangeIdDb(parameterId, subCategoryId, parameterRangeId);
+        return response.length > 0
+            ? sendResponse(req, res, 200, response)
+            : sendResponse(req, res, 404, "Parameter range not found for this parameter, subcategory, and range ID");
+    } catch (error) {
+        return sendResponse(req, res, 500, error.message);
+    }
+}
+
 module.exports = {
     addDefaultParameterRange,
     updateDefaultParameterRange,
     getAllParameterRangesByParameterId,
+    getParameterRangesByParameterAndSubCategory,
     getSingleParameterRange,
+    getSpecificParameterRangeByParameterSubCategoryAndRangeId,
     deleteParameterRange
 }
