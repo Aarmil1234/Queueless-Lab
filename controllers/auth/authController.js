@@ -27,7 +27,7 @@ async function login(req, res) {
 
         // Generate JWT token
         const token = jwt.sign(
-            { id: owner._id, email: owner.email },
+            { id: owner._id, email: owner.email, labId: owner._id },
             JWT_SECRET,
             { expiresIn: '24h' }
         );
@@ -86,7 +86,7 @@ async function signup(req, res) {
 
         // Generate JWT token
         const token = jwt.sign(
-            { id: newOwner._id, email: newOwner.email },
+            { id: newOwner._id, email: newOwner.email, labId: newOwner._id },
             JWT_SECRET,
             { expiresIn: '24h' }
         );

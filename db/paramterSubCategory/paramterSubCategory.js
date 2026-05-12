@@ -1,9 +1,9 @@
 const ParameterSubCategory = require('../../models/parameterSubCategoryModel');
 const { Responses } = require('../../utils/responses');
 
-async function getAllParameterSubCategoriesDb() {
+async function getAllParameterSubCategoriesDb(labId) {
     try {
-        const subCategories = await ParameterSubCategory.find({ delete: false })
+        const subCategories = await ParameterSubCategory.find({ labId, delete: false })
             .populate('parameterId', 'code name category')
             .sort({ createdAt: -1 });
         return subCategories;
@@ -12,10 +12,11 @@ async function getAllParameterSubCategoriesDb() {
     }
 }
 
-async function getParameterSubCategoriesByParameterIdDb(parameterId) {
+async function getParameterSubCategoriesByParameterIdDb(parameterId, labId) {
     try {
         const subCategories = await ParameterSubCategory.find({ 
-            parameterId: parameterId, 
+            parameterId: parameterId,
+            labId,
             delete: false 
         })
         .populate('parameterId', 'code name category')
@@ -26,9 +27,9 @@ async function getParameterSubCategoriesByParameterIdDb(parameterId) {
     }
 }
 
-async function getSingleParameterSubCategoryByIdDb(id) {
+async function getSingleParameterSubCategoryByIdDb(id, labId) {
     try {
-        const subCategory = await ParameterSubCategory.findById(id)
+        const subCategory = await ParameterSubCategory.findOne({ _id: id, labId })
             .populate('parameterId', 'code name category');
         return [subCategory];
     } catch (error) {
@@ -46,10 +47,10 @@ async function addParameterSubCategoryDb(data) {
     }
 }
 
-async function updateParameterSubCategoryDb(id, data) {
+async function updateParameterSubCategoryDb(id, data, labId) {
     try {
         //check if parameter subcategory exists
-        const existingParameterSubCategory = await ParameterSubCategory.findById(id);
+        const existingParameterSubCategory = await ParameterSubCategory.findOne({ _id: id, labId });
         if (!existingParameterSubCategory) {
             return Responses.notFound;
         }
@@ -65,6 +66,7 @@ async function updateParameterSubCategoryDb(id, data) {
             
             const duplicateCheck = await ParameterSubCategory.findOne({
                 parameterId: data.parameterId || existingParameterSubCategory.parameterId,
+                labId,
                 code: data.code,
                 delete: false,
                 _id: { $ne: id }
@@ -104,9 +106,10 @@ async function updateParameterSubCategoryDb(id, data) {
     }
 }
 
-async function deleteParameterSubCategoryDb(id) {
+async function deleteParameterSubCategoryDb(id, labId) {
     try {
-        const deletedParameterSubCategory = await ParameterSubCategory.findByIdAndUpdate(id,
+        const deletedParameterSubCategory = await ParameterSubCategory.findOneAndUpdate(
+            { _id: id, labId },
             {
                 delete: true,
                 updatedAt: new Date()

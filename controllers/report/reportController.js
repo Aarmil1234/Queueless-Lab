@@ -6,14 +6,8 @@ const Report = require("../../models/reports");
 
 const createNewReport = async (req, res) => {
     try {
-        const { patientId, tests, labId } = req.body;
-        
-        if (!labId) {
-            return sendResponse(req, res, 400, {
-                success: false,
-                message: 'labId is required'
-            });
-        }
+        const { patientId, tests } = req.body;
+        const labId = req.labId;
         
         // Support both string array and object array for tests
         if (tests && Array.isArray(tests)) {
@@ -43,12 +37,13 @@ const createNewReport = async (req, res) => {
 
 const addPatientReport = async (req, res) => {
     try {
-        const { reportId, testId, testResult, labId, testParameters } = req.body;
+        const { reportId, testId, testResult, testParameters } = req.body;
+        const labId = req.labId;
 
-        if (!testId || !labId) {
+        if (!testId) {
             return sendResponse(req, res, 400, {
                 success: false,
-                message: 'testId and labId are required'
+                message: 'testId is required'
             });
         }
 
@@ -135,14 +130,7 @@ const addPatientReport = async (req, res) => {
 const getPatientReport = async (req, res) => {
     try {
         const { patientId } = req.params;
-        const { labId } = req.body;
-        
-        if (!labId) {
-            return sendResponse(req, res, 400, {
-                success: false,
-                message: 'labId is required'
-            });
-        }
+        const labId = req.labId;
         
         const result = await getAllPatientReportDB(labId);
         return sendResponse(req, res, 200, result.data);
@@ -178,14 +166,7 @@ async function getAllPatientReport(req, res) {
 async function getReportById(req, res) {
     try {
         const { reportId } = req.params;
-        const { labId } = req.body;
-        
-        if (!labId) {
-            return sendResponse(req, res, 400, {
-                success: false,
-                message: 'labId is required'
-            });
-        }
+        const labId = req.labId;
         
         const result = await getReportByIdDB(reportId, labId);
         return sendResponse(req, res, 200, result);
@@ -200,14 +181,7 @@ async function getReportById(req, res) {
 async function getTestsListReport(req, res) {
     try {
         const { patientId, status } = req.params;
-        const { labId } = req.body;
-        
-        if (!labId) {
-            return sendResponse(req, res, 400, {
-                success: false,
-                message: 'labId is required'
-            });
-        }
+        const labId = req.labId;
         
         const result = await getTestsListForReportDb(patientId, status, labId);
         return sendResponse(req, res, 200, result);

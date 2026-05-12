@@ -1,18 +1,18 @@
 const Parameter = require('../../models/parameter');
 const { Responses } = require('../../utils/responses');
 
-async function getAllParametersDb() {
+async function getAllParametersDb(labId) {
     try {
-        const parameters = await Parameter.find({ delete: false }).sort({ create: -1 });
+        const parameters = await Parameter.find({ labId, delete: false }).sort({ create: -1 });
         return parameters;
     } catch (error) {
         return [];
     }
 }
 
-async function getParameterByIdDb(id) {
+async function getParameterByIdDb(id, labId) {
     try {
-        const parameter = await Parameter.findById(id);
+        const parameter = await Parameter.findOne({ _id: id, labId });
         return [parameter];
     } catch (error) {
         return [];
@@ -24,6 +24,7 @@ async function addParameterDb(data) {
         //check if parameter with same code already exists 
         const existingParameter = await Parameter.findOne({
             code: { $regex: new RegExp(`^${data.code}$`, 'i') },
+            labId: data.labId,
             delete: false
         }); 
         if (existingParameter) {
@@ -37,10 +38,10 @@ async function addParameterDb(data) {
     }
 }
 
-async function updateParameterDb(id, data) {
+async function updateParameterDb(id, data, labId) {
     try {
         //check if parameter exists
-        const existingParameter = await Parameter.findById(id);
+        const existingParameter = await Parameter.findOne({ _id: id, labId });
         if (!existingParameter) {
             return Responses.notFound;
         }
@@ -48,6 +49,7 @@ async function updateParameterDb(id, data) {
         if (data.code && data.code !== existingParameter.code) {
             const codeExists = await Parameter.findOne({
                 code: data.code,
+                labId,
                 _id: { $ne: id },
                 delete: { $ne: true }
             });
@@ -72,9 +74,10 @@ async function updateParameterDb(id, data) {
     }
 }
 
-async function deleteParameterDb(id) {
+async function deleteParameterDb(id, labId) {
     try {
-        const deletedParameter = await Parameter.findByIdAndUpdate(id,
+        const deletedParameter = await Parameter.findOneAndUpdate(
+            { _id: id, labId },
             {
                 delete: true,
                 updatedAt: new Date()

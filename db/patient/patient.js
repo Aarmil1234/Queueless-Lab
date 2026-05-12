@@ -8,9 +8,9 @@ const Report = require("../../models/reports");
 const addPatientDb = async (data) => {
     try {
 
-        let { patientName, gender, dateOfBirth, age, referredByDoctor, doctorContactNo, address, mobileNumber, tests, city } = data;
+        let { patientName, gender, dateOfBirth, age, referredByDoctor, doctorContactNo, address, mobileNumber, tests, city, labId } = data;
 
-        const existingPatient = await Patient.findOne({ mobileNumber });
+        const existingPatient = await Patient.findOne({ mobileNumber, labId });
         if (existingPatient) {
             return {
                 ...Responses.success,
@@ -20,7 +20,7 @@ const addPatientDb = async (data) => {
 
         //generate case id randonmly as of now
         const caseId = "CASE-" + Math.floor(Math.random() * 1000000);
-        const patient = new Patient({ caseId, patientName, gender, dateOfBirth, age, referredByDoctor, doctorContactNo, address, mobileNumber, tests, city });
+        const patient = new Patient({ caseId, patientName, gender, dateOfBirth, age, referredByDoctor, doctorContactNo, address, mobileNumber, tests, city, labId });
         await patient.save();
         return {
             ...Responses.success,
@@ -45,9 +45,9 @@ const addPatientDb = async (data) => {
     }
 };
 
-const getAllPatientDb = async () => {
+const getAllPatientDb = async (labId) => {
     try {
-        const patients = await Patient.find({});
+        const patients = await Patient.find({ labId });
         return patients;
     } catch (error) {
         console.error('Error in getAllPatientDb:', error);
@@ -55,12 +55,13 @@ const getAllPatientDb = async () => {
     }
 }
 
-const getPatientsWithPendingReportsDb = async () => {
+const getPatientsWithPendingReportsDb = async (labId) => {
     try {
 
         // Find reports that have at least one test with isReportSubmitted = false
         const reportsWithPendingTests = await Report.find({
-            'testReport.isReportSubmitted': false
+            'testReport.isReportSubmitted': false,
+            labId
         }).select('patientId id');
 
         // Extract unique patient IDs and create a map of patientId to reportIds
@@ -76,7 +77,8 @@ const getPatientsWithPendingReportsDb = async () => {
 
         // Find patients with those IDs
         const patients = await Patient.find({
-            '_id': { $in: patientIds }
+            '_id': { $in: patientIds },
+            labId
         });
 
         // Add reportIds to each patient
@@ -92,11 +94,12 @@ const getPatientsWithPendingReportsDb = async () => {
     }
 }
 
-const getPatientsWithSubmittedReportsDb = async () => {
+const getPatientsWithSubmittedReportsDb = async (labId) => {
     try {
 
         const reportsWithSubmittedTests = await Report.find({
-            'testReport.isReportSubmitted': true
+            'testReport.isReportSubmitted': true,
+            labId
         }).select('patientId id');
 
         // Extract unique patient IDs and create a map of patientId to reportIds
@@ -112,7 +115,8 @@ const getPatientsWithSubmittedReportsDb = async () => {
 
         // Find patients with those IDs
         const patients = await Patient.find({
-            '_id': { $in: patientIds }
+            '_id': { $in: patientIds },
+            labId
         });
 
         // Add reportIds to each patient

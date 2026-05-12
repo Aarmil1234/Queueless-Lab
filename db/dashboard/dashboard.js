@@ -2,9 +2,10 @@ const { Responses } = require("../../utils/responses");
 const Report = require("../../models/reports");
 const Patient = require("../../models/patient");
 
-async function doctorWisePatientDb() {
+async function doctorWisePatientDb(labId) {
     try {
         const result = await Patient.aggregate([
+            { $match: { labId } },
             {
                 $group: {
                     _id: {
@@ -31,9 +32,9 @@ async function doctorWisePatientDb() {
     }
 }
 
-async function getTotalPatientCount() {
+async function getTotalPatientCount(labId) {
     try {
-        const count = await Patient.countDocuments({});
+        const count = await Patient.countDocuments({ labId });
         return count;
     } catch (error) {
         console.error('Error in getTotalPatientCount:', error);
@@ -41,9 +42,10 @@ async function getTotalPatientCount() {
     }
 }
 
-async function testWisePatientDb() {
+async function testWisePatientDb(labId) {
     try {
         const result = await Report.aggregate([
+            { $match: { labId } },
             { $unwind: '$testReport' },
             {
                 $group: {
@@ -67,7 +69,7 @@ async function testWisePatientDb() {
     }
 }
 
-async function weeklyReportDataDb() {
+async function weeklyReportDataDb(labId) {
     try {
         const today = new Date();
 
@@ -89,6 +91,7 @@ async function weeklyReportDataDb() {
         const result = await Report.aggregate([
             {
                 $match: {
+                    labId,
                     createdAt: {
                         $gte: monday,
                         $lte: endOfToday
@@ -140,9 +143,10 @@ async function weeklyReportDataDb() {
     }
 }
 
-async function cityWiseReportDataDb() {
+async function cityWiseReportDataDb(labId) {
     try {
         const result = await Report.aggregate([
+            { $match: { labId } },
             {
                 $addFields: {
                     patientObjectId: { $toObjectId: "$patientId" }

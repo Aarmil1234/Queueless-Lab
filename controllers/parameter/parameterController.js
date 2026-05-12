@@ -21,6 +21,7 @@ const sanitizeParameterPayload = (payload = {}) => ({
 async function addParameter(req, res) {
     try {
         const parameterData = sanitizeParameterPayload(req.body);
+        parameterData.labId = req.labId;
         const response =    await addParameterDb(parameterData);
         return sendResponse(req, res, response.statusCode, response.clientMessage);
     } catch (error) {
@@ -35,7 +36,7 @@ async function updateParameter(req, res) {
     try {
         const { id } = req.params;
         const updateData = sanitizeParameterPayload(req.body);
-        const response = await updateParameterDb(id, updateData);
+        const response = await updateParameterDb(id, updateData, req.labId);
         return sendResponse(req, res, response.statusCode, response.clientMessage);
     } catch (error) {
         return sendResponse(req, res, 500, error.message);
@@ -44,7 +45,7 @@ async function updateParameter(req, res) {
 
 async function getAllParameters(req, res) {
     try {
-        const response = await getAllParametersDb();
+        const response = await getAllParametersDb(req.labId);
         if(response.length > 0){
             return sendResponse(req, res, 200, response);
         }
@@ -57,7 +58,7 @@ async function getAllParameters(req, res) {
 async function getParameterById(req, res) {
     try {
         const { id } = req.params;
-        const response = await getParameterByIdDb(id);
+        const response = await getParameterByIdDb(id, req.labId);
         if(response.length > 0){
             return sendResponse(req, res, 200, response);
         }
@@ -70,7 +71,7 @@ async function getParameterById(req, res) {
 async function deleteParameter(req, res) {
     try {
         const { id } = req.params;
-        const response = await deleteParameterDb(id);
+        const response = await deleteParameterDb(id, req.labId);
         return sendResponse(req, res, response.statusCode, response.clientMessage);
     } catch (error) {
         return sendResponse(req, res, 500, error.message);

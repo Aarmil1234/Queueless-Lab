@@ -16,7 +16,8 @@ const addPatient = async (req, res) => {
             address,
             city,
             mobileNumber,
-            tests
+            tests,
+            labId: req.labId
         }
         const response = await addPatientDb(patientData);
         if (response.statusCode !== 200) {
@@ -39,7 +40,7 @@ const addPatient = async (req, res) => {
 
 const getAllPatient = async (req, res) => {
     try {
-        const result = await getAllPatientDb();
+        const result = await getAllPatientDb(req.labId);
         return sendResponse(req, res, 200, result);
     } catch (error) {
         return sendResponse(req, res, 500, { Message: error.message });
@@ -48,7 +49,7 @@ const getAllPatient = async (req, res) => {
 
 const getPatientsWithPendingReports = async (req, res) => {
     try {
-        const result = await getPatientsWithPendingReportsDb();
+        const result = await getPatientsWithPendingReportsDb(req.labId);
         return sendResponse(req, res, 200, result);
     } catch (error) {
         return sendResponse(req, res, 500, { Message: error.message });
@@ -57,7 +58,7 @@ const getPatientsWithPendingReports = async (req, res) => {
 
 const getPatientsWithSubmittedReports = async (req, res) => {
     try {
-        const result = await getPatientsWithSubmittedReportsDb();
+        const result = await getPatientsWithSubmittedReportsDb(req.labId);
         return sendResponse(req, res, 200, result);
     } catch (error) {
         return sendResponse(req, res, 500, { Message: error.message });

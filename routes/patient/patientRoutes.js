@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const patientController = require("../../controllers/patient/patientController");
+const authMiddleware = require("../../middleware/authMiddleware");
+
+router.use(authMiddleware);
 
 router.post('/', patientController.addPatient);
 router.get('/getAllPatient', patientController.getAllPatient);

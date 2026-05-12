@@ -7,6 +7,12 @@ const parameterSubCategorySchema = new mongoose.Schema({
         ref: 'Parameter',
         required: true
     },
+    labId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'LaboratoryOwner',
+        required: true,
+        index: true
+    },
     code: {
         type: String,
         required: true,

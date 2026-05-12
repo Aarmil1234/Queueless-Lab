@@ -8,6 +8,12 @@ const patientSchema = new Schema({
         trim: true,
         unique: true
     },
+    labId: {
+        type: Schema.Types.ObjectId,
+        ref: 'LaboratoryOwner',
+        required: true,
+        index: true
+    },
     patientName: {
         type: String,
         required: [true, 'Patient name is required'],

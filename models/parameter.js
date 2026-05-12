@@ -9,6 +9,12 @@ const parameterSchema = new mongoose.Schema({
         trim: true,
         uppercase: true
     },
+    labId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'LaboratoryOwner',
+        required: true,
+        index: true
+    },
     name: {
         type: String,
         required: true,

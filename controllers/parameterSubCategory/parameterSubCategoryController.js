@@ -43,6 +43,7 @@ const sanitizeParameterSubCategory = (payload = {}) => {
 async function addParameterSubCategory(req, res) {
     try {
         const sanitizedData = sanitizeParameterSubCategory(req.body);
+        sanitizedData.labId = req.labId;
 
         const response = await addParameterSubCategoryDb(sanitizedData);
 
@@ -74,7 +75,7 @@ async function updateParameterSubCategory(req, res) {
     try {
         const { parameterSubCategoryId } = req.params;
         const sanitizedData = sanitizeParameterSubCategory(req.body);
-        const response = await updateParameterSubCategoryDb(parameterSubCategoryId, sanitizedData);
+        const response = await updateParameterSubCategoryDb(parameterSubCategoryId, sanitizedData, req.labId);
         return sendResponse(req, res, response.statusCode, response.clientMessage);
     } catch (error) {
         return sendResponse(req, res, 500, error.message);
@@ -85,7 +86,7 @@ async function updateParameterSubCategory(req, res) {
 async function getAllParameterSubCategoriesByParameterId(req, res) {
     try {
         const { parameterId } = req.params;
-        const response = await getParameterSubCategoriesByParameterIdDb(parameterId);
+        const response = await getParameterSubCategoriesByParameterIdDb(parameterId, req.labId);
         return response.length > 0
             ? sendResponse(req, res, 200, response)
             : sendResponse(req, res, 404, "No parameter subcategories found for this parameter");
@@ -96,7 +97,7 @@ async function getAllParameterSubCategoriesByParameterId(req, res) {
 
 async function getAllParameterSubCategories(req, res) {
     try {
-        const response = await getAllParameterSubCategoriesDb();
+        const response = await getAllParameterSubCategoriesDb(req.labId);
         return response.length > 0
             ? sendResponse(req, res, 200, response)
             : sendResponse(req, res, 404, "No parameter subcategories found");
@@ -109,7 +110,7 @@ async function getAllParameterSubCategories(req, res) {
 async function getSingleParameterSubCategory(req, res) {
     try {
         const { parameterSubCategoryId } = req.params;
-        const response = await getSingleParameterSubCategoryByIdDb(parameterSubCategoryId);
+        const response = await getSingleParameterSubCategoryByIdDb(parameterSubCategoryId, req.labId);
         return response.length > 0
             ? sendResponse(req, res, 200, response)
             : sendResponse(req, res, 404, "Parameter subcategory not found");
@@ -121,7 +122,7 @@ async function getSingleParameterSubCategory(req, res) {
 async function deleteParameterSubCategory(req, res) {
     try {
         const { parameterSubCategoryId } = req.params;
-        const response = await deleteParameterSubCategoryDb(parameterSubCategoryId);
+        const response = await deleteParameterSubCategoryDb(parameterSubCategoryId, req.labId);
         return sendResponse(req, res, response.statusCode, response.clientMessage);
     } catch (error) {
         return sendResponse(req, res, 500, error.message);

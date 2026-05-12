@@ -130,7 +130,8 @@ const createTest = async (req, res) => {
             testName,
             testCode,
             category,
-            parameters
+            parameters,
+            labId: req.labId
         });
 
         if (result.statusCode && result.statusCode >= 400) {
@@ -155,7 +156,7 @@ const createTest = async (req, res) => {
 
 const getAllTests = async (req, res) => {
     try {
-        const result = await getAllTestsDb();
+        const result = await getAllTestsDb(req.labId);
         return sendResponse(req, res, 200, result.data);
     } catch (error) {
         return sendResponse(req, res, 500, {
@@ -168,7 +169,7 @@ const getAllTests = async (req, res) => {
 const getTestById = async (req, res) => {
     try {
         const { testId } = req.params;
-        const result = await getTestByIdDb(testId);
+        const result = await getTestByIdDb(testId, req.labId);
         
         if (result.statusCode && result.statusCode >= 400) {
             return sendResponse(req, res, result.statusCode, {
@@ -189,7 +190,7 @@ const getTestById = async (req, res) => {
 const getTestParametersWithSubCategories = async (req, res) => {
     try {
         const { testId } = req.params;
-        const result = await getTestParametersWithSubCategoriesDb(testId);
+        const result = await getTestParametersWithSubCategoriesDb(testId, req.labId);
         
         if (result.statusCode && result.statusCode >= 400) {
             return sendResponse(req, res, result.statusCode, {

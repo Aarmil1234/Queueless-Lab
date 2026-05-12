@@ -9,6 +9,13 @@ const defaultParameterRangeSchema = new mongoose.Schema({
         required: true
     },
 
+    labId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'LaboratoryOwner',
+        required: true,
+        index: true
+    },
+
     subCategoryId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'ParameterSubCategory',

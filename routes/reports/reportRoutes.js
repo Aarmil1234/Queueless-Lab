@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const reportController = require("../../controllers/report/reportController");
+const authMiddleware = require("../../middleware/authMiddleware");
+
+router.use(authMiddleware);
 
 router.post('/testWise', reportController.addPatientReport);
 router.post('/create', reportController.createNewReport);

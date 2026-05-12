@@ -5,12 +5,13 @@ const ParameterSubCategory = require("../../models/parameterSubCategoryModel");
 
 const createTestDb = async (testData) => {
     try {
-        const { testName, testCode, category, parameters } = testData;
+        const { testName, testCode, category, parameters, labId } = testData;
 
         // Validate parameters exist
         if (parameters && parameters.length > 0) {
             const existingParameters = await Parameter.find({
                 _id: { $in: parameters },
+                labId,
                 delete: false,
                 isActive: true
             });
@@ -27,7 +28,8 @@ const createTestDb = async (testData) => {
             testName,
             testCode,
             category,
-            parameters: parameters || []
+            parameters: parameters || [],
+            labId
         });
 
         await test.save();
@@ -45,9 +47,10 @@ const createTestDb = async (testData) => {
     }
 };
 
-const getAllTestsDb = async () => {
+const getAllTestsDb = async (labId) => {
     try {
         const tests = await Test.find({
+            labId,
             delete: false,
             isActive: true
         })
@@ -67,10 +70,11 @@ const getAllTestsDb = async () => {
     }
 };
 
-const getTestByIdDb = async (testId) => {
+const getTestByIdDb = async (testId, labId) => {
     try {
         const test = await Test.findOne({
             _id: testId,
+            labId,
             delete: false,
             isActive: true
         })
@@ -97,16 +101,17 @@ const getTestByIdDb = async (testId) => {
     }
 };
 
-const getTestParametersWithSubCategoriesDb = async (testId) => {
+const getTestParametersWithSubCategoriesDb = async (testId, labId) => {
     try {
         const test = await Test.findOne({
             _id: testId,
+            labId,
             delete: false,
             isActive: true
         })
         .populate({
             path: 'parameters',
-            match: { delete: false, isActive: true },
+            match: { labId, delete: false, isActive: true },
             select: 'code name category type unit'
         })
         .lean();

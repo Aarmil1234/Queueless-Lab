@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const authMiddleware = require("../../middleware/authMiddleware");
 const {
     getAllTestList,
     createTest,
@@ -7,6 +8,8 @@ const {
     getTestById,
     getTestParametersWithSubCategories
 } = require('../../controllers/test/testController');
+
+router.use(authMiddleware);
 
 // Legacy route - keep for backward compatibility
 router.get('/test-list', getAllTestList);

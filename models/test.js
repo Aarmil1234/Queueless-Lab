@@ -11,6 +11,12 @@ const testSchema = new mongoose.Schema({
         required: true,
         unique: true
     },
+    labId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'LaboratoryOwner',
+        required: true,
+        index: true
+    },
     category: {
         type: String,
         required: true

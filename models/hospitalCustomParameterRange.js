@@ -6,6 +6,12 @@ const hospitalCustomParameterRange = new mongoose.Schema({
         ref: 'Hospital',
         required: true
     },
+    labId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'LaboratoryOwner',
+        required: true,
+        index: true
+    },
     parameterId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Parameter',
