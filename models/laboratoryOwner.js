@@ -33,6 +33,15 @@ const laboratoryOwnerSchema = new Schema({
         lowercase: true,
         match: [/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/, 'Please enter a valid email address']
     },
+    password: {
+        type: String,
+        required: false,
+        select: false
+    },
+    token: {
+        type: String,
+        default: null
+    },
     isActive: {
         type: Boolean,
         default: true

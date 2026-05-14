@@ -1,8 +1,10 @@
 const jwt = require('jsonwebtoken');
+const LaboratoryOwner = require('../models/laboratoryOwner');
 
-const authMiddleware = (req, res, next) => {
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+
+const authMiddleware = async (req, res, next) => {
     try {
-        // Get token from header
         const authHeader = req.headers.authorization;
 
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -12,18 +14,22 @@ const authMiddleware = (req, res, next) => {
             });
         }
 
-        // Extract token
         const token = authHeader.split(' ')[1];
+        const decoded = jwt.verify(token, JWT_SECRET);
 
-        // Verify token
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const owner = await LaboratoryOwner.findOne({ _id: decoded.id, token, isActive: true });
+        if (!owner) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid or expired token'
+            });
+        }
 
-        // Pass labId to request
-        req.headers.labId = decoded.labId;
-        req.labId = decoded.labId;
+        req.headers.labId = owner._id;
+        req.labId = owner._id;
+        req.owner = owner;
 
         next();
-
     } catch (error) {
         return res.status(401).json({
             success: false,

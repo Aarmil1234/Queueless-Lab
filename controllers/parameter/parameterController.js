@@ -22,9 +22,12 @@ async function addParameter(req, res) {
     try {
         const parameterData = sanitizeParameterPayload(req.body);
         parameterData.labId = req.labId;
-        const response =    await addParameterDb(parameterData);
+        const response =  await addParameterDb(parameterData);
+        console.log("======response======", response);
         return sendResponse(req, res, response.statusCode, response.clientMessage);
     } catch (error) {
+        // logger.error(`Error in addParameter: ${error.message}`);
+        
         return sendResponse(req, res, 500, error.message);
     }
 };

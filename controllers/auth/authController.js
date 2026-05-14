@@ -32,6 +32,10 @@ async function login(req, res) {
             { expiresIn: '24h' }
         );
 
+        // Save token for middleware validation and lab-specific access
+        owner.token = token;
+        await owner.save({ validateBeforeSave: false });
+
         // Return success response with token
         return sendResponse(req, res, 200, {
             success: true,
@@ -90,6 +94,9 @@ async function signup(req, res) {
             JWT_SECRET,
             { expiresIn: '24h' }
         );
+
+        newOwner.token = token;
+        await newOwner.save({ validateBeforeSave: false });
 
         // Return success response with token
         return sendResponse(req, res, 201, {

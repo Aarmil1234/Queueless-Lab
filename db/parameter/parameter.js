@@ -26,7 +26,8 @@ async function addParameterDb(data) {
             code: { $regex: new RegExp(`^${data.code}$`, 'i') },
             labId: data.labId,
             delete: false
-        }); 
+        });
+        
         if (existingParameter) {
             return Responses.alreadyExist;
         }
