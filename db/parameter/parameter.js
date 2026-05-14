@@ -32,8 +32,7 @@ async function addParameterDb(data) {
             return Responses.alreadyExist;
         }
         const parameter = new Parameter(data);
-        console.log("parameter", parameter);
-        
+
         await parameter.save();
         return Responses.success;
     } catch (error) {

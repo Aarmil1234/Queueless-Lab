@@ -5,7 +5,7 @@ const parameterSchema = new mongoose.Schema({
     code: {
         type: String,
         required: true,
-        // unique: true,
+        unique: false,
         trim: true,
         uppercase: true
     },
