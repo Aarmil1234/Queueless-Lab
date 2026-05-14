@@ -12,7 +12,7 @@ async function login(req, res) {
         if (!labMobileNumber) {
             return sendResponse(req, res, 400, {
                 success: false,
-                message: 'Email and password are required'
+                message: 'Mobile number is required'
             });
         }
 
