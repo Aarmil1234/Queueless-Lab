@@ -28,7 +28,7 @@ const addPatient = async (req, res) => {
 
         let responseForReport;
         if (Array.isArray(tests) && tests.length > 0) {
-            responseForReport = await createNewReportDb(createdPatient.id, tests);
+            responseForReport = await createNewReportDb(createdPatient.id, tests, req.labId);
         }
 
         return sendResponse(req, res, response.statusCode, response.message);
