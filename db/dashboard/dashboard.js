@@ -1,6 +1,7 @@
 const { Responses } = require("../../utils/responses");
 const Report = require("../../models/reports");
 const Patient = require("../../models/patient");
+const mongoose = require('mongoose');
 
 async function doctorWisePatientDb(labId) {
     try {
@@ -32,7 +33,7 @@ async function doctorWisePatientDb(labId) {
     }
 }
 
-async function getTotalPatientCount(labId) {
+async function getTotalPatientCount(labId) {    
     try {
         const count = await Patient.countDocuments({ labId });
         return count;
@@ -44,27 +45,41 @@ async function getTotalPatientCount(labId) {
 
 async function testWisePatientDb(labId) {
     try {
+        const data = await Report.find({ labId });
+        console.log("find result:", data.length);
+
         const result = await Report.aggregate([
-            { $match: { labId } },
-            { $unwind: '$testReport' },
+            {
+                $match: {
+                    $expr: {
+                        $eq: [
+                            { $toString: "$labId" },
+                            labId.toString()
+                        ]
+                    }
+                }
+            },
+            { $unwind: "$testReport" },
             {
                 $group: {
-                    _id: '$testReport.testName',
+                    _id: "$testReport.testName",
                     patientCount: { $sum: 1 }
                 }
             },
             {
                 $project: {
                     _id: 0,
-                    testName: '$_id',
+                    testName: "$_id",
                     patientCount: 1
                 }
             },
             { $sort: { patientCount: -1 } }
         ]);
+
         return result;
+
     } catch (error) {
-        console.error('Error in testWisePatientDb:', error);
+        console.error(error);
         throw error;
     }
 }
