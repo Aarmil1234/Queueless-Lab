@@ -106,7 +106,12 @@ async function weeklyReportDataDb(labId) {
         const result = await Report.aggregate([
             {
                 $match: {
-                    labId,
+                    $expr: {
+                        $eq: [
+                            { $toString: "$labId" },
+                            labId.toString()
+                        ]
+                    },
                     createdAt: {
                         $gte: monday,
                         $lte: endOfToday
