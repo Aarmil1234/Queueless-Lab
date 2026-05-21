@@ -165,7 +165,8 @@ async function weeklyReportDataDb(labId) {
 
 async function cityWiseReportDataDb(labId) {
     try {
-        
+console.log("labId==", labId);
+
         const result = await Report.aggregate([
             { 
                 $match: {
