@@ -166,7 +166,16 @@ async function weeklyReportDataDb(labId) {
 async function cityWiseReportDataDb(labId) {
     try {
         const result = await Report.aggregate([
-            { $match: { labId } },
+            { 
+                $match: {
+                    $expr: {
+                        $eq: [
+                            { $toString: "$labId" },
+                            labId.toString()
+                        ]
+                    }
+                }
+            },
             {
                 $addFields: {
                     patientObjectId: { $toObjectId: "$patientId" }
