@@ -56,7 +56,12 @@ const sanitizeDefaultParameterRange = (payload = {}) => {
 
 async function addDefaultParameterRange(req, res) {
     try {
-        const sanitizedData = sanitizeDefaultParameterRange(req.body);
+        const labId = req.labId;
+        // const sanitizedData = sanitizeDefaultParameterRange(req.body);
+        const sanitizedData = {
+            ...sanitizeDefaultParameterRange(req.body),
+            labId
+        };
 
         const response = await addDefaultParameterRangeDb(sanitizedData);
 

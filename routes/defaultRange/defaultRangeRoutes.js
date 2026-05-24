@@ -1,6 +1,9 @@
 const express = require('express');
 const defaultParameterRangeController = require('../../controllers/defaultParameterRange/defaultParameterRangeController');
 const router = express.Router();
+const authMiddleware = require("../../middleware/authMiddleware");
+
+router.use(authMiddleware);
 
 router.get('/:parameterId', defaultParameterRangeController.getAllParameterRangesByParameterId);
 

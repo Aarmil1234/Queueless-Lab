@@ -1,4 +1,6 @@
 const ParameterSubCategory = require('../../models/parameterSubCategoryModel');
+const DefaultParameterRange = require('../../models/defaultParameterRange');
+const HospitalReferenceRange = require('../../models/hospitalCustomParameterRange');
 const { Responses } = require('../../utils/responses');
 
 async function getAllParameterSubCategoriesDb(labId) {
@@ -27,11 +29,38 @@ async function getParameterSubCategoriesByParameterIdDb(parameterId, labId) {
     }
 }
 
+// async function getSingleParameterSubCategoryByIdDb(id, labId) {
+//     try {
+//         const subCategory = await ParameterSubCategory.findOne({ _id: id, labId })
+//             .populate('parameterId', 'code name category');
+//         return [subCategory];
+//     } catch (error) {
+//         return [];
+//     }
+// }
+
 async function getSingleParameterSubCategoryByIdDb(id, labId) {
     try {
         const subCategory = await ParameterSubCategory.findOne({ _id: id, labId })
             .populate('parameterId', 'code name category');
-        return [subCategory];
+
+        if (!subCategory) return [];
+
+        // Fetch default ranges tied to this subcategory
+        const defaultRanges = await DefaultParameterRange.find({ subCategoryId: id, labId, delete: false })
+            .sort({ createdAt: -1 });
+
+        // Fetch hospital-specific ranges for the same parameter within this lab (active only)
+        const parameterId = subCategory.parameterId && subCategory.parameterId._id ? subCategory.parameterId._id : subCategory.parameterId;
+        const hospitalRanges = await HospitalReferenceRange.find({ parameterId: parameterId, labId, isActive: true, delete: false })
+            .sort({ createdAt: -1 });
+
+        const result = Object.assign(
+            (typeof subCategory.toObject === 'function') ? subCategory.toObject() : {},
+            { defaultRanges, hospitalRanges }
+        );
+
+        return [result];
     } catch (error) {
         return [];
     }

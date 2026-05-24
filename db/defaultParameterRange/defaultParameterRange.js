@@ -68,6 +68,7 @@ async function getSpecificParameterRangeByParameterSubCategoryAndRangeIdDb(param
 async function addDefaultParameterRangeDb(data) {
     try {
         const parameterRange = new DefaultParameterRange(data);
+        
         await parameterRange.save();
         return Responses.success;
     } catch (error) {
