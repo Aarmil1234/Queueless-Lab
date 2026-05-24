@@ -23,17 +23,65 @@ async function getParameterSubCategoriesByParameterIdDb(parameterId, labId) {
         })
         .populate('parameterId', 'code name category')
         .sort({ createdAt: -1 });
-        return subCategories;
+
+        if (!subCategories || subCategories.length === 0) return [];
+
+        // Map over each subCategory and enrich with defaultRanges + hospitalRanges
+        const result = await Promise.all(
+            subCategories.map(async (subCategory) => {
+                const subCategoryId = subCategory._id;
+                const resolvedParameterId = subCategory.parameterId?._id ?? subCategory.parameterId;
+
+                // , hospitalRanges
+                const [defaultRanges] = await Promise.all([
+                    DefaultParameterRange.find({ subCategoryId, labId, delete: false })
+                        .sort({ createdAt: -1 }),
+                    HospitalReferenceRange.find({ parameterId: resolvedParameterId, labId, isActive: true, delete: false })
+                        .sort({ createdAt: -1 }),
+                ]);
+
+                return Object.assign(
+                    (typeof subCategory.toObject === 'function') ? subCategory.toObject() : { ...subCategory },
+                    { defaultRanges }
+                    // , hospitalRanges
+                );
+            })
+        );
+
+        return result;
     } catch (error) {
+        console.error("getParameterSubCategoriesByParameterIdDb error:", error);
         return [];
     }
 }
 
-// async function getSingleParameterSubCategoryByIdDb(id, labId) {
+// async function getParameterSubCategoriesByParameterIdDb(parameterId, labId) {
 //     try {
-//         const subCategory = await ParameterSubCategory.findOne({ _id: id, labId })
-//             .populate('parameterId', 'code name category');
-//         return [subCategory];
+//         const subCategories = await ParameterSubCategory.find({ 
+//             parameterId: parameterId,
+//             labId,
+//             delete: false 
+//         })
+//         .populate('parameterId', 'code name category')
+//         .sort({ createdAt: -1 });
+//         if (!subCategories) return [];
+
+//         const defaultRanges = await DefaultParameterRange.find({ subCategoryId: id, labId, delete: false })
+//             .sort({ createdAt: -1 });
+//             // console.log("defaultRanges", defaultRanges);
+
+//         // Fetch hospital-specific ranges for the same parameter within this lab (active only)
+//         const parameterId = subCategory.parameterId && subCategory.parameterId._id ? subCategory.parameterId._id : subCategory.parameterId;
+//         const hospitalRanges = await HospitalReferenceRange.find({ parameterId: parameterId, labId, isActive: true, delete: false })
+//             .sort({ createdAt: -1 });
+
+//         const result = Object.assign(
+//             (typeof subCategory.toObject === 'function') ? subCategory.toObject() : {},
+//             { defaultRanges, hospitalRanges }
+//         );
+
+//         return [result];
+//         // return subCategories;
 //     } catch (error) {
 //         return [];
 //     }
@@ -43,28 +91,39 @@ async function getSingleParameterSubCategoryByIdDb(id, labId) {
     try {
         const subCategory = await ParameterSubCategory.findOne({ _id: id, labId })
             .populate('parameterId', 'code name category');
-
-        if (!subCategory) return [];
-
-        // Fetch default ranges tied to this subcategory
-        const defaultRanges = await DefaultParameterRange.find({ subCategoryId: id, labId, delete: false })
-            .sort({ createdAt: -1 });
-
-        // Fetch hospital-specific ranges for the same parameter within this lab (active only)
-        const parameterId = subCategory.parameterId && subCategory.parameterId._id ? subCategory.parameterId._id : subCategory.parameterId;
-        const hospitalRanges = await HospitalReferenceRange.find({ parameterId: parameterId, labId, isActive: true, delete: false })
-            .sort({ createdAt: -1 });
-
-        const result = Object.assign(
-            (typeof subCategory.toObject === 'function') ? subCategory.toObject() : {},
-            { defaultRanges, hospitalRanges }
-        );
-
-        return [result];
+        return [subCategory];
     } catch (error) {
         return [];
     }
 }
+
+// async function getSingleParameterSubCategoryByIdDb(id, labId) {
+//     try {
+//         const subCategory = await ParameterSubCategory.findOne({ _id: id, labId })
+//             .populate('parameterId', 'code name category');
+
+//         if (!subCategory) return [];
+
+//         // Fetch default ranges tied to this subcategory
+//         const defaultRanges = await DefaultParameterRange.find({ subCategoryId: id, labId, delete: false })
+//             .sort({ createdAt: -1 });
+//             // console.log("defaultRanges", defaultRanges);
+
+//         // Fetch hospital-specific ranges for the same parameter within this lab (active only)
+//         const parameterId = subCategory.parameterId && subCategory.parameterId._id ? subCategory.parameterId._id : subCategory.parameterId;
+//         const hospitalRanges = await HospitalReferenceRange.find({ parameterId: parameterId, labId, isActive: true, delete: false })
+//             .sort({ createdAt: -1 });
+
+//         const result = Object.assign(
+//             (typeof subCategory.toObject === 'function') ? subCategory.toObject() : {},
+//             { defaultRanges, hospitalRanges }
+//         );
+
+//         return [result];
+//     } catch (error) {
+//         return [];
+//     }
+// }
 
 async function addParameterSubCategoryDb(data) {
     try {
