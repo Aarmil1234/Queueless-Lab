@@ -10,13 +10,17 @@ const addPatientDb = async (data) => {
 
         let { patientName, gender, dateOfBirth, age, referredByDoctor, doctorContactNo, address, mobileNumber, tests, city, labId } = data;
 
-        const existingPatient = await Patient.findOne({ mobileNumber, labId });
-        if (existingPatient) {
-            return {
-                ...Responses.success,
-                data: existingPatient
-            };
-        }
+        // const existingPatient = await Patient.findOne({ mobileNumber, labId });
+        // if (existingPatient) {
+        //     return {
+        //         ...Responses.success,
+        //         data: existingPatient
+        //     };
+        //     // return {
+        //     //     success: false,
+        //     //     message: "Patient with this mobile number already exists"
+        //     // };
+        // }
 
         //generate case id randonmly as of now
         const caseId = "CASE-" + Math.floor(Math.random() * 1000000);

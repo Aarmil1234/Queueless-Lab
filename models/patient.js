@@ -62,7 +62,6 @@ const patientSchema = new Schema({
         type: String,
         required: [true, 'Mobile number is required'],
         trim: true,
-        unique: true
     },
     tests: {
         type: Array,
