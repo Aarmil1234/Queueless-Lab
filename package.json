@@ -12,16 +12,19 @@
     "url": "git+https://github.com/Aarmil1234/Queueless-Lab.git"
   },
   "dependencies": {
-    "axios": "^1.16.0",
+    "axios": "^1.16.1",
     "bcrypt": "^6.0.0",
+    "cloudinary": "^2.10.0",
     "cors": "^2.8.5",
-    "dotenv": "^17.2.0",
+    "dotenv": "^17.4.2",
     "express": "^5.1.0",
     "http": "^0.0.1-security",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.0.2",
     "multer": "^2.0.2",
+    "multer-storage-cloudinary": "^4.0.0",
     "nodemon": "^3.1.10",
+    "pdfkit": "^0.18.0",
     "uuid4": "^2.0.3"
   },
   "devDependencies": {

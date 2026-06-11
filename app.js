@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const http = require('http');
 const db = require('./db/db.js');
+require('dotenv').config();
 
 const mainRouter = require('./routes/routes.js');
 
@@ -13,8 +14,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // === Routes Placeholder ===
+app.use(
+  '/uploads',
+  express.static('uploads')
+);
 app.use('/api', mainRouter );
-
 const server = http.createServer(app);
 
 // === Database Connection ===
