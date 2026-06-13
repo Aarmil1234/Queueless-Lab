@@ -32,6 +32,65 @@ const axios = require("axios");
 const cloudinary = require("cloudinary").v2;
 const fs = require("fs");
 
+const AIBOTIC_URL = "https://app.aibotick.com/api/v1/whatsapp/";
+
+const sendWhatsAppMessages = async (type, numbers, data) => {
+    try {
+        switch (type) {
+
+            case "labReport":
+
+                for (const mobileNumber of numbers) {
+
+                    const phone = mobileNumber.startsWith("+")
+                        ? mobileNumber
+                        : `+${mobileNumber}`;
+
+                    const endpoint =
+                        `https://app.aibotick.com/api/v1/whatsapp/send/template`;
+                        //  +
+                        // `?apiToken=${encodeURIComponent(process.env.AIBOTICK_API_KEY)}` +
+                        // `&phone_number_id=${process.env.PHONE_NUMBER_ID}` +
+                        // `&template_id=391493` +
+                        // `&phone_number=${encodeURIComponent(phone)}` +
+                        // `&template_header_media_url=${encodeURIComponent(data.pdfUrl)}`;
+
+                        const payload = {
+                            apiToken: process.env.AIBOTICK_API_KEY,
+                            phone_number_id: process.env.PHONE_NUMBER_ID,
+                            template_id: 391493,
+                            phone_number: phone,
+                            template_header_media_url: data.pdfUrl
+                        };
+
+                        // console.log("endpoint", endpoint);
+                        // 356611
+
+                    const response = await axios.post(endpoint, payload);
+                    // const response = await axios.get(endpoint);
+
+                    // console.log(
+                    //     `Lab report sent to ${phone}`,
+                    //     response.data
+                    // );
+                }
+
+                break;
+
+            default:
+                throw new Error(`Unsupported template type: ${type}`);
+        }
+
+    } catch (error) {
+        // console.error("Error sending WhatsApp messages:", error);
+        console.error(
+            "WhatsApp API Error:",
+            error.response?.data || error.message
+        );
+        throw error;
+    }
+}
+
 // console.log(fs.existsSync(pdfPath));
 
 // const stats = fs.statSync(pdfPath);
@@ -91,30 +150,21 @@ const fs = require("fs");
 
 // };
 
-const sendWhatsAppPDF = async (mobileNumber, pdfUrl, fileName) => {
-    try {
-        const encodedUrl = encodeURIComponent(pdfUrl);
-        const phone = mobileNumber.startsWith("+") ? mobileNumber : `+${mobileNumber}`;
+// const sendWhatsAppPDF = async (mobileNumber, pdfUrl, fileName) => {
+//     try {
+//         const phone = mobileNumber && mobileNumber.startsWith("+") ? mobileNumber : `+${mobileNumber}`;
 
-        const url = `https://app.aibotick.com/api/v1/whatsapp/send/template`
-            + `?apiToken=20970%7CrDt2wANWKITudrxzN14lwnFAFIgYMG2Pfm0lt5m36843b784`
-            + `&phone_number_id=728249873715160`
-            + `&template_id=356611`
-            + `&template_header_media_url=${encodedUrl}`
-            + `&phone_number=${encodeURIComponent(phone)}`;  // ✅ encode the + sign too
+//         const endpoint = `https://app.aibotick.com/api/v1/whatsapp/send/template?apiToken=20970%7CrDt2wANWKITudrxzN14lwnFAFIgYMG2Pfm0lt5m36843b784&phone_number_id=728249873715160&template_id=356611&phone_number=${phone}&template_header_media_url=${pdfUrl}`;
 
-            // console.log("url", url);            
+//         console.log("endpoint", endpoint);
 
-        // console.log("Sending WhatsApp PDF:", { phone, fileName, pdfUrl });
-
-        const response = await axios.get(url);
-        return response.data;
-
-    } catch (error) {
-        console.error("WhatsApp API error:", error.response?.data || error.message);
-        throw error;
-    }
-};
+//         const response = await axios.get(endpoint);
+//         return response.data;
+//     } catch (error) {
+//         console.error("WhatsApp API error:", error.response?.data || error.message);
+//         throw error;
+//     }
+// };
 
 // const sendWhatsAppPDF = async (
 //     mobileNumber,
@@ -141,5 +191,5 @@ const sendWhatsAppPDF = async (mobileNumber, pdfUrl, fileName) => {
 // };
 
 module.exports = {
-    sendWhatsAppPDF
+    sendWhatsAppMessages
 };

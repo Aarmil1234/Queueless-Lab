@@ -39,6 +39,7 @@ const createNewReport = async (req, res) => {
 
 // const path = require("path");
 const { cloudinary } = require("../../cloudinary/index");
+const { log } = require("console");
 
 // const path = require("path"); // ensure this is at the top of your file
 
@@ -69,8 +70,8 @@ const addPatientReport = async (req, res) => {
             });
         }
 
-        const { generatePatientReportPDF } = require("../../services/pdfService");
-        const { sendWhatsAppPDF } = require("../../services/whatsappService");
+        const { generatePatientReportPDF, savePatientReportPDFLocally } = require("../../services/pdfService");
+        const { sendWhatsAppPDF, sendWhatsAppMessages } = require("../../services/whatsappService");
         const { Readable } = require("stream");
 
         const savedReport = result.data;
@@ -80,23 +81,44 @@ const addPatientReport = async (req, res) => {
         if (!patient) {
             throw new Error("Patient not found");
         }
+        // log("savedReport=====",savedReport);
 
-        // ✅ Build the report object for PDF with real patient data
+        // Build the report object for PDF with real patient data
+        // Build the report object for PDF with real patient data
         const reportForPDF = {
-            patientName: patient.name || patient.patientName || "",
+            patientName:  patient.name || patient.patientName || "",
             mobileNumber: patient.mobileNumber || "",
-            gender: patient.gender || "",
-            testReport: savedReport.testReport || [
+            gender:       patient.gender || "",
+            testResult:   testResult || null,          // ← full testResult object from req.body
+            testReport:   savedReport.testReport || [
                 {
-                    testName: savedReport.testName || "Lab Test",
-                    testParameters: savedReport.testParameters?.map(p => ({
-                        parameterName: p.parameterName,
-                        value: p.value ?? "",
-                        unit: p.unit || ""
-                    })) || []
+                    testName:       savedReport.testName || "Lab Test",
+                    testParameters: (savedReport.testParameters || []).map(p => ({
+                        parameterName:  p.parameterName,
+                        value:          p.value ?? "",
+                        unit:           p.unit || "",
+                        isCritical:     p.isCritical ?? false,
+                        referenceRange: p.referenceRange || null,
+                        remarks:        p.remarks || ""
+                    }))
                 }
             ]
         };
+        // const reportForPDF = {
+        //     patientName: patient.name || patient.patientName || "",
+        //     mobileNumber: patient.mobileNumber || "",
+        //     gender: patient.gender || "",
+        //     testReport: savedReport.testReport || [
+        //         {
+        //             testName: savedReport.testName || "Lab Test",
+        //             testParameters: savedReport.testParameters?.map(p => ({
+        //                 parameterName: p.parameterName,
+        //                 value: p.value ?? "",
+        //                 unit: p.unit || ""
+        //             })) || []
+        //         }
+        //     ]
+        // };
 
         // console.log("Report for PDF:", JSON.stringify(reportForPDF, null, 2));
 
@@ -119,7 +141,16 @@ const addPatientReport = async (req, res) => {
 
         // console.log("PDF buffer size:", pdf.buffer.length, "bytes");
 
-        const publicId = `reports/${path.parse(pdf.fileName).name}.pdf`;
+        const publicId = `reports/${path.parse(pdf.fileName).name}`;
+
+        // Save PDF to local file system
+        let localPDFInfo = null;
+        try {
+            localPDFInfo = await savePatientReportPDFLocally(pdf.buffer, pdf.fileName);
+            // console.log("PDF saved locally:", localPDFInfo.localPath);
+        } catch (err) {
+            console.error("Local PDF save failed (non-fatal):", err.message);
+        }
 
         // const uploadResult = await new Promise((resolve, reject) => {
         //     const uploadStream = cloudinary.uploader.upload_stream(
@@ -150,18 +181,14 @@ const addPatientReport = async (req, res) => {
         const uploadResult = await new Promise((resolve, reject) => {
             const uploadStream = cloudinary.uploader.upload_stream(
                 {
-                    resource_type: "raw",
+                    resource_type: "image",
                     public_id: publicId,
                     overwrite: true,
                     unique_filename: false,
-                    // ✅ Force correct content-type via eager transformation
-                    // eager: [{ format: "pdf" }],
-                    // eager_async: false,
+                    format: "pdf"
                 },
                 (error, result) => {
                     if (error) return reject(error);
-                    // console.log("resource_type:", result.resource_type);
-                    // console.log("URL:", result.secure_url);
                     resolve(result);
                 }
             );
@@ -176,10 +203,11 @@ const addPatientReport = async (req, res) => {
             bufferStream.pipe(uploadStream);
         });
 
-        // const pdfUrl = uploadResult.secure_url;
-
         const pdfUrl = uploadResult.secure_url;
-        // console.log("Cloudinary PDF URL:", pdfUrl);
+
+//         console.log("Cloudinary PDF resource_type:", uploadResult.resource_type, "==TYPEE==",
+// uploadResult.type, "SECURE",
+// uploadResult.secure_url);
         // console.log("Upload size:", uploadResult.bytes, "bytes");
 
         // Generate PDF buffer in memory
@@ -211,7 +239,7 @@ const addPatientReport = async (req, res) => {
         // const pdfUrl = cloudinary.url(uploadResult.public_id, {
         //     resource_type: "raw",
         //     secure: true,
-        //     flags: "attachment"   // ✅ ensures WhatsApp/browser treats it as a file
+        //     flags: "attachment"   // ensures WhatsApp/browser treats it as a file
         // });
 
         // console.log("Cloudinary PDF URL:", pdfUrl);
@@ -225,7 +253,14 @@ const addPatientReport = async (req, res) => {
         // Send WhatsApp — wrapped so a failure doesn't roll back the saved report
         let whatsappError = null;
         try {
-            await sendWhatsAppPDF(patient.mobileNumber, pdfUrl, pdf.fileName);
+            await sendWhatsAppMessages(
+                "labReport",
+                [patient.mobileNumber],
+                {
+                    pdfUrl: pdfUrl
+                }
+            );
+
         } catch (err) {
             console.error("WhatsApp send failed (non-fatal):", err.message);
             whatsappError = err.message;
@@ -241,11 +276,18 @@ const addPatientReport = async (req, res) => {
                     resourceType: uploadResult.resource_type,
                     format: uploadResult.format
                 },
+                ...(localPDFInfo && { 
+                    localPDF: {
+                        fileName: localPDFInfo.fileName,
+                        localPath: localPDFInfo.localPath,
+                        accessible: true
+                    }
+                }),
                 ...(whatsappError && { whatsappWarning: whatsappError }) // surface warning without failing
             }
         };
 
-        return sendResponse(req, res, 200, responseData);  // ✅ explicit 200 on success
+        return sendResponse(req, res, 200, responseData);  // explicit 200 on success
 
     } catch (error) {
         console.error(error);
