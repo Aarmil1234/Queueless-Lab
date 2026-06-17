@@ -205,11 +205,6 @@ const addPatientReport = async (req, res) => {
 
         const pdfUrl = uploadResult.secure_url;
 
-//         console.log("Cloudinary PDF resource_type:", uploadResult.resource_type, "==TYPEE==",
-// uploadResult.type, "SECURE",
-// uploadResult.secure_url);
-        // console.log("Upload size:", uploadResult.bytes, "bytes");
-
         // Generate PDF buffer in memory
         // const pdf = await generatePatientReportPDF(savedReport);
 
@@ -253,6 +248,8 @@ const addPatientReport = async (req, res) => {
         // Send WhatsApp — wrapped so a failure doesn't roll back the saved report
         let whatsappError = null;
         try {
+            // console.log("pdfUrl", pdfUrl);
+
             await sendWhatsAppMessages(
                 "labReport",
                 [patient.mobileNumber],

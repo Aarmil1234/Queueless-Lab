@@ -47,26 +47,40 @@ const sendWhatsAppMessages = async (type, numbers, data) => {
                         : `+${mobileNumber}`;
 
                     const endpoint =
-                        `https://app.aibotick.com/api/v1/whatsapp/send/template`;
-                        //  +
-                        // `?apiToken=${encodeURIComponent(process.env.AIBOTICK_API_KEY)}` +
-                        // `&phone_number_id=${process.env.PHONE_NUMBER_ID}` +
-                        // `&template_id=391493` +
-                        // `&phone_number=${encodeURIComponent(phone)}` +
-                        // `&template_header_media_url=${encodeURIComponent(data.pdfUrl)}`;
+                        `https://app.aibotick.com/api/v1/whatsapp/send/template`
+                         +
+                        `?apiToken=${encodeURIComponent(process.env.AIBOTICK_API_KEY)}` +
+                        `&phone_number_id=${process.env.PHONE_NUMBER_ID}` +
+                        `&template_id=391493` +
+                        `&phone_number=${encodeURIComponent(phone)}` +
+                        `&template_header_media_url=${encodeURIComponent(data.pdfUrl)}`;
 
                         const payload = {
                             apiToken: process.env.AIBOTICK_API_KEY,
                             phone_number_id: process.env.PHONE_NUMBER_ID,
                             template_id: 391493,
                             phone_number: phone,
-                            template_header_media_url: data.pdfUrl
+                            template_header_media_url: encodeURIComponent(data.pdfUrl)
                         };
 
                         // console.log("endpoint", endpoint);
-                        // 356611
 
-                    const response = await axios.post(endpoint, payload);
+                    // const response = await axios.post(endpoint, payload);
+                    const response = await axios.get(
+                        "https://app.aibotick.com/api/v1/whatsapp/send/template",
+                        {
+                            // headers: {
+                            // apiToken: process.env.AIBOTICK_API_KEY
+                            // },
+                            params: {
+                            apiToken: process.env.AIBOTICK_API_KEY,
+                            phone_number_id: process.env.PHONE_NUMBER_ID,
+                            template_id: 391493,
+                            phone_number: phone,
+                            template_header_media_url: data.pdfUrl
+                            }
+                        }
+                    );
                     // const response = await axios.get(endpoint);
 
                     // console.log(
@@ -82,7 +96,6 @@ const sendWhatsAppMessages = async (type, numbers, data) => {
         }
 
     } catch (error) {
-        // console.error("Error sending WhatsApp messages:", error);
         console.error(
             "WhatsApp API Error:",
             error.response?.data || error.message
