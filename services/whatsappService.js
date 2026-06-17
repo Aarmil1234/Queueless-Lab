@@ -83,10 +83,10 @@ const sendWhatsAppMessages = async (type, numbers, data) => {
                     );
                     // const response = await axios.get(endpoint);
 
-                    // console.log(
-                    //     `Lab report sent to ${phone}`,
-                    //     response.data
-                    // );
+                    console.log(
+                        `Lab report sent to ${phone}`,
+                        response.data
+                    );
                 }
 
                 break;

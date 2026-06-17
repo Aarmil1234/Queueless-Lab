@@ -248,7 +248,7 @@ const addPatientReport = async (req, res) => {
         // Send WhatsApp — wrapped so a failure doesn't roll back the saved report
         let whatsappError = null;
         try {
-            // console.log("pdfUrl", pdfUrl);
+            console.log("pdfUrl", pdfUrl);
 
             await sendWhatsAppMessages(
                 "labReport",
