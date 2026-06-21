@@ -46,21 +46,27 @@ const sendWhatsAppMessages = async (type, numbers, data) => {
                         ? mobileNumber
                         : `+${mobileNumber}`;
 
+                        // https://app.aibotick.com/api/v1/whatsapp/send/template?apiToken=21157%7Cl44l3QhKJBzR2yBqP5WjCN02ndRwWD1afRDHsDA7cbe91dde&phone_number_id=728249873715160&template_id=394626&template_header_media_url=https%3A%2F%2Fbot-data.s3.ap-southeast-1.wasabisys.com%2Fflowbuilder%2F170167%2F278168%2Fwhatsapp-382327%2Fflowbuilder-278168-1781851478.pdf&templateVariable-name-1=shweta&phone_number=+918849088819
+
                     const endpoint =
                         `https://app.aibotick.com/api/v1/whatsapp/send/template`
                          +
                         `?apiToken=${encodeURIComponent(process.env.AIBOTICK_API_KEY)}` +
                         `&phone_number_id=${process.env.PHONE_NUMBER_ID}` +
-                        `&template_id=391493` +
+                        `&template_id=394626` +
                         `&phone_number=${encodeURIComponent(phone)}` +
+                        `&templateVariable-name-1=${encodeURIComponent(data.patientName)}` +
                         `&template_header_media_url=${encodeURIComponent(data.pdfUrl)}`;
+
+                        console.log("data.patientName", data);
 
                         const payload = {
                             apiToken: process.env.AIBOTICK_API_KEY,
                             phone_number_id: process.env.PHONE_NUMBER_ID,
-                            template_id: 391493,
+                            template_id: 394626,
                             phone_number: phone,
-                            template_header_media_url: encodeURIComponent(data.pdfUrl)
+                            "templateVariable-name-1": data.patientName,
+                            template_header_media_url: data.pdfUrl
                         };
 
                         // console.log("endpoint", endpoint);
@@ -75,8 +81,9 @@ const sendWhatsAppMessages = async (type, numbers, data) => {
                             params: {
                             apiToken: process.env.AIBOTICK_API_KEY,
                             phone_number_id: process.env.PHONE_NUMBER_ID,
-                            template_id: 391493,
+                            template_id: 394626,
                             phone_number: phone,
+                            "templateVariable-name-1": data.patientName,
                             template_header_media_url: data.pdfUrl
                             }
                         }
