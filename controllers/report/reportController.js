@@ -154,6 +154,8 @@ const addPatientReport = async (req, res) => {
             bufferStream.pipe(uploadStream);
         });
 
+        // console.log("=====", patient.doctorContactNo);
+        
         const pdfUrl = uploadResult.secure_url;
 
         // Send WhatsApp — wrapped so a failure doesn't roll back the saved report
@@ -165,6 +167,8 @@ const addPatientReport = async (req, res) => {
                 [patient.mobileNumber],
                 {
                     patientName: patient.name || patient.patientName || "",
+                    doctorContactNo: patient.doctorContactNo || "",
+                    doctorName : patient.referredByDoctor || "",
                     pdfUrl: pdfUrl
                 }
             );

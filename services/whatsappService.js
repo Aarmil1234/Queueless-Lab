@@ -46,6 +46,10 @@ const sendWhatsAppMessages = async (type, numbers, data) => {
                         ? mobileNumber
                         : `+${mobileNumber}`;
 
+                    const doctorContactNo = data.doctorContactNo.startsWith("+")
+                    ? data.doctorContactNo
+                    : `+${data.doctorContactNo}`;
+
                         // https://app.aibotick.com/api/v1/whatsapp/send/template?apiToken=21157%7Cl44l3QhKJBzR2yBqP5WjCN02ndRwWD1afRDHsDA7cbe91dde&phone_number_id=728249873715160&template_id=394626&template_header_media_url=https%3A%2F%2Fbot-data.s3.ap-southeast-1.wasabisys.com%2Fflowbuilder%2F170167%2F278168%2Fwhatsapp-382327%2Fflowbuilder-278168-1781851478.pdf&templateVariable-name-1=shweta&phone_number=+918849088819
 
                     const endpoint =
@@ -58,7 +62,8 @@ const sendWhatsAppMessages = async (type, numbers, data) => {
                         `&templateVariable-name-1=${encodeURIComponent(data.patientName)}` +
                         `&template_header_media_url=${encodeURIComponent(data.pdfUrl)}`;
 
-                        console.log("data.patientName", data);
+                        // console.log("data.patientName", data.patientName);
+                        // console.log("data.doctorContactNo", data.doctorContactNo);
 
                         const payload = {
                             apiToken: process.env.AIBOTICK_API_KEY,
@@ -75,24 +80,37 @@ const sendWhatsAppMessages = async (type, numbers, data) => {
                     const response = await axios.get(
                         "https://app.aibotick.com/api/v1/whatsapp/send/template",
                         {
-                            // headers: {
-                            // apiToken: process.env.AIBOTICK_API_KEY
-                            // },
                             params: {
                             apiToken: process.env.AIBOTICK_API_KEY,
                             phone_number_id: process.env.PHONE_NUMBER_ID,
                             template_id: 394626,
-                            phone_number: phone,
+                            phone_number: doctorContactNo,
                             "templateVariable-name-1": data.patientName,
                             template_header_media_url: data.pdfUrl
                             }
                         }
                     );
-                    // const response = await axios.get(endpoint);
 
-                    console.log(
-                        `Lab report sent to ${phone}`,
-                        response.data
+                    // console.log(
+                    //     `Lab report sent to ${phone}`,
+                    //     response.data
+                    // );
+
+                    // https://app.aibotick.com/api/v1/whatsapp/send/template?apiToken=21157%7Cl44l3QhKJBzR2yBqP5WjCN02ndRwWD1afRDHsDA7cbe91dde&phone_number_id=728249873715160&template_id=356610&template_header_media_url=https%3A%2F%2Fbot-data.s3.ap-southeast-1.wasabisys.com%2Fflowbuilder%2F170167%2F278168%2Fwhatsapp-382327%2Fflowbuilder-278168-1783233131.pdf&phone_number=PHONE-NUMBER
+
+                    const drResponse = await axios.get(
+                        "https://app.aibotick.com/api/v1/whatsapp/send/template",
+                        {
+                            params: {
+                            apiToken: process.env.AIBOTICK_API_KEY,
+                            phone_number_id: process.env.PHONE_NUMBER_ID,
+                            template_id: 356610,
+                            phone_number: phone,
+                            "templateVariable-name-1": data.doctorName,
+                            "templateVariable-name-2": data.patientName,
+                            template_header_media_url: data.pdfUrl
+                            }
+                        }
                     );
                 }
 
