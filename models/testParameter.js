@@ -20,6 +20,10 @@ const testParameterSchema = new mongoose.Schema({
         enum: ['NORMAL', 'ABNORMAL', 'CRITICAL', 'PENDING'],
         default: 'PENDING'
     },
+    unit: {
+        type: String,
+        default: ''
+    },
     notes: {
         type: String,
         default: ''

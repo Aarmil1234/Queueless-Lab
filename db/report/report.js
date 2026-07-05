@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const { Responses } = require("../../utils/responses");
 const Report = require("../../models/reports");
 const Patient = require("../../models/patient");
@@ -7,7 +8,41 @@ const Test = require("../../models/test");
 
 const addPatientReportDb = async (data) => {
     try {
-        const { reportId, testId, testResult, labId, testParameters } = data;
+        const { reportId, testId, testResult, labId, testParameters, tests } = data;
+
+        const normalizeTestParameters = async (incomingParameters = []) => {
+            if (!Array.isArray(incomingParameters)) {
+                return [];
+            }
+
+            const normalized = [];
+            for (const parameter of incomingParameters) {
+                if (!parameter?.parameterId) {
+                    continue;
+                }
+
+                if (!mongoose.Types.ObjectId.isValid(parameter.parameterId)) {
+                    continue;
+                }
+
+                const existingParameter = await Parameter.findOne({
+                    _id: parameter.parameterId,
+                    delete: false,
+                    isActive: true
+                });
+
+                if (!existingParameter) {
+                    continue;
+                }
+
+                normalized.push({
+                    ...parameter,
+                    unit: parameter.unit || existingParameter.unit || ""
+                });
+            }
+
+            return normalized;
+        };
 
         // Find the existing report by reportId and labId
         let report = await Report.findOne({ _id: reportId, labId });
@@ -19,7 +54,76 @@ const addPatientReportDb = async (data) => {
             };
         }
 
-        // Find the test with matching testId
+        const incomingTests = Array.isArray(tests) ? tests : [];
+
+        if (incomingTests.length > 0) {
+            for (const incomingTest of incomingTests) {
+                const incomingTestId = incomingTest?.testId;
+
+                if (!incomingTestId || !mongoose.Types.ObjectId.isValid(incomingTestId)) {
+                    return {
+                        success: false,
+                        message: 'Each test entry must include a valid testId'
+                    };
+                }
+
+                const testToUpdate = report.testReport.find(test => test._id.toString() === incomingTestId.toString());
+
+                if (!testToUpdate) {
+                    return {
+                        success: false,
+                        message: 'Test not found in report'
+                    };
+                }
+
+                if (incomingTest?.testResult && typeof incomingTest.testResult === 'object') {
+                    const resultMap = new Map(Object.entries(incomingTest.testResult));
+                    testToUpdate.testResult = resultMap;
+                }
+
+                if (Array.isArray(incomingTest?.testParameters)) {
+                    const normalizedParameters = await normalizeTestParameters(incomingTest.testParameters);
+
+                    for (const tp of normalizedParameters) {
+                        if (tp?.subCategoryId) {
+                            const subCategory = await ParameterSubCategory.findOne({
+                                _id: tp.subCategoryId,
+                                parameterId: tp.parameterId,
+                                delete: false,
+                                isActive: true
+                            });
+
+                            if (!subCategory) {
+                                continue;
+                            }
+                        }
+                    }
+
+                    testToUpdate.testParameters = normalizedParameters;
+                }
+
+                if (incomingTest?.testName) {
+                    testToUpdate.testName = incomingTest.testName;
+                }
+
+                testToUpdate.isReportSubmitted = true;
+            }
+
+            await report.save();
+
+            return {
+                ...Responses.success,
+                data: report
+            };
+        }
+
+        if (!testId) {
+            return {
+                success: false,
+                message: 'testId is required'
+            };
+        }
+
         const testToUpdate = report.testReport.find(test => test._id.toString() === testId);
 
         if (!testToUpdate) {
@@ -29,31 +133,15 @@ const addPatientReportDb = async (data) => {
             };
         }
 
-        // Update traditional testResult for backward compatibility
         if (testResult) {
             const resultMap = new Map(Object.entries(testResult));
             testToUpdate.testResult = resultMap;
         }
 
-        // Update dynamic testParameters if provided
         if (testParameters && Array.isArray(testParameters)) {
-            // Validate parameter IDs
-            const parameterIds = testParameters.map(tp => tp.parameterId);
-            const validParameters = await Parameter.find({
-                _id: { $in: parameterIds },
-                delete: false,
-                isActive: true
-            });
+            const normalizedParameters = await normalizeTestParameters(testParameters);
 
-            if (validParameters.length !== parameterIds.length) {
-                return {
-                    success: false,
-                    message: 'One or more parameters are invalid'
-                };
-            }
-
-            // Validate subcategory IDs if provided
-            for (const tp of testParameters) {
+            for (const tp of normalizedParameters) {
                 if (tp.subCategoryId) {
                     const subCategory = await ParameterSubCategory.findOne({
                         _id: tp.subCategoryId,
@@ -63,15 +151,12 @@ const addPatientReportDb = async (data) => {
                     });
 
                     if (!subCategory) {
-                        return {
-                            success: false,
-                            message: `Invalid subcategory for parameter ${tp.parameterId}`
-                        };
+                        continue;
                     }
                 }
             }
 
-            testToUpdate.testParameters = testParameters;
+            testToUpdate.testParameters = normalizedParameters;
         }
 
         testToUpdate.isReportSubmitted = true;
@@ -229,6 +314,7 @@ async function createNewReportDb(patientId, tests, labId) {
                             subCategoryId: null,
                             value: null,
                             status: 'PENDING',
+                            unit: param.unit || "",
                             notes: ''
                         }));
                     }

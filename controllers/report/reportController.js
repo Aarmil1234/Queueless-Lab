@@ -41,7 +41,7 @@ const createNewReport = async (req, res) => {
 const { cloudinary } = require("../../cloudinary/index");
 const { log } = require("console");
 
-const addPatientReport = async (req, res) => {
+const addPatientReportOld = async (req, res) => {
     try {
         const { reportId, testId, testResult, testParameters } = req.body;
         const labId = req.labId;
@@ -153,8 +153,6 @@ const addPatientReport = async (req, res) => {
 
             bufferStream.pipe(uploadStream);
         });
-
-        // console.log("=====", patient.doctorContactNo);
         
         const pdfUrl = uploadResult.secure_url;
 
@@ -200,6 +198,179 @@ const addPatientReport = async (req, res) => {
         };
 
         return sendResponse(req, res, 200, responseData);  // explicit 200 on success
+
+    } catch (error) {
+        console.error(error);
+        return sendResponse(req, res, 500, {
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+const addPatientReport = async (req, res) => {
+    try {
+        const { reportId, tests } = req.body; 
+        const labId = req.labId;
+
+        if (!tests || !Array.isArray(tests) || tests.length === 0) {
+            return sendResponse(req, res, 400, {
+                success: false,
+                message: "tests array is required and cannot be empty"
+            });
+        }
+
+        for (const test of tests) {
+            if (typeof test !== 'object' || !test.testId) {
+                return sendResponse(req, res, 400, {
+                    success: false,
+                    message: "Each test entry must include a valid testId"
+                });
+            }
+
+            if (!mongoose.Types.ObjectId.isValid(test.testId)) {
+                return sendResponse(req, res, 400, {
+                    success: false,
+                    message: "Invalid testId format"
+                });
+            }
+        }
+
+        // Pass the array payload directly to the DB service layer
+        const result = await addPatientReportDb({
+            reportId,
+            labId,
+            tests 
+        });
+
+        if (!result || result.success === false || (result.statusCode && result.statusCode >= 400)) {
+            return sendResponse(req, res, result?.statusCode || 400, {
+                success: false,
+                message: result?.message || result?.error || "Unable to add patient reports"
+            });
+        }
+
+        const { generatePatientReportPDF, savePatientReportPDFLocally } = require("../../services/pdfService");
+        const { sendWhatsAppMessages } = require("../../services/whatsappService");
+        const { Readable } = require("stream");
+
+        const savedReport = result.data;
+
+        // Retrieve the single patient document linked to this main report
+        const patient = await PatientModal.findById(savedReport.patientId);
+        if (!patient) {
+            throw new Error("Patient not found");
+        }
+
+        // Construct structural map for multi-test report generation
+        const reportForPDF = {
+            patientName: patient.name || patient.patientName || "",
+            mobileNumber: patient.mobileNumber || "",
+            gender: patient.gender || "",
+            age: patient.age !== undefined && patient.age !== null ? `${patient.age} ${patient.ageType || ""}`.trim() : "",
+            reportId: savedReport._id?.toString() || "",
+            reportDate: savedReport.createdAt || new Date(),
+            testReport: (savedReport.testReport || []).map(test => ({
+                testName: test.testName || "Lab Test",
+                testResult: test.testResult || null,
+                testParameters: (test.testParameters || []).map(p => ({
+                    parameterName: p.parameterName || p.parameter || "",
+                    value: p.value ?? "",
+                    unit: p.unit || "",
+                    isCritical: p.isCritical ?? false,
+                    referenceRange: p.referenceRange || p.referenceRangeText || null,
+                    remarks: p.remarks || ""
+                }))
+            }))
+        };
+
+        // Render the raw PDF data pipeline across the newly structured object
+        const pdf = await generatePatientReportPDF(reportForPDF);
+
+        if (!pdf.buffer || pdf.buffer.length === 0) {
+            throw new Error("PDF buffer is empty");
+        }
+
+        const pdfHeader = pdf.buffer.slice(0, 4).toString("ascii");
+        if (pdfHeader !== "%PDF") {
+            throw new Error(`Invalid PDF buffer. Header found: ${pdfHeader}`);
+        }
+
+        const publicId = `reports/${path.parse(pdf.fileName).name}`;
+
+        let localPDFInfo = null;
+        try {
+            localPDFInfo = await savePatientReportPDFLocally(pdf.buffer, pdf.fileName);
+        } catch (err) {
+            console.error("Local PDF save failed (non-fatal):", err.message);
+        }
+
+        const uploadResult = await new Promise((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(
+                {
+                    resource_type: "image",
+                    public_id: publicId,
+                    overwrite: true,
+                    unique_filename: false,
+                    format: "pdf"
+                },
+                (error, result) => {
+                    if (error) return reject(error);
+                    resolve(result);
+                }
+            );
+
+            const bufferStream = new Readable({
+                read() {
+                    this.push(pdf.buffer);
+                    this.push(null);
+                }
+            });
+
+            bufferStream.pipe(uploadStream);
+        });
+        
+        const pdfUrl = uploadResult.secure_url;
+
+        let whatsappError = null;
+        try {
+            await sendWhatsAppMessages(
+                "labReport",
+                [patient.mobileNumber],
+                {
+                    patientName: patient.name || patient.patientName || "",
+                    doctorContactNo: patient.doctorContactNo || "",
+                    doctorName: patient.referredByDoctor || "",
+                    pdfUrl: pdfUrl
+                }
+            );
+        } catch (err) {
+            console.error("WhatsApp send failed (non-fatal):", err.message);
+            whatsappError = err.message;
+        }
+
+        const responseData = {
+            success: true,
+            data: {
+                ...((savedReport?.toObject) ? savedReport.toObject() : savedReport),
+                pdfUrl,
+                cloudinary: {
+                    publicId: uploadResult.public_id,
+                    resourceType: uploadResult.resource_type,
+                    format: uploadResult.format
+                },
+                ...(localPDFInfo && { 
+                    localPDF: {
+                        fileName: localPDFInfo.fileName,
+                        localPath: localPDFInfo.localPath,
+                        accessible: true
+                    }
+                }),
+                ...(whatsappError && { whatsappWarning: whatsappError })
+            }
+        };
+
+        return sendResponse(req, res, 200, responseData);
 
     } catch (error) {
         console.error(error);
