@@ -888,7 +888,8 @@ const getPatientReport = async (req, res) => {
 
 async function getAllPatientReport(req, res) {
     try {
-        const { labId } = req.body;
+        // const { labId } = req.body;
+        const labId = req.labId;
         
         if (!labId) {
             return sendResponse(req, res, 400, {
