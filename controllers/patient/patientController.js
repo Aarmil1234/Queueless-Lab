@@ -2,6 +2,7 @@
 const { sendResponse } = require("../../utils/sendResponse");
 const { addPatientDb, getAllPatientDb, getPatientsWithPendingReportsDb, getPatientsWithSubmittedReportsDb } = require("../../db/patient/patient");
 const { createNewReportDb } = require("../../db/report/report");
+const { sendPatientRegistrationMessage } = require("../../services/whatsappService");
 
 const addPatient = async (req, res) => {
     try {
@@ -29,6 +30,18 @@ const addPatient = async (req, res) => {
         let responseForReport;
         if (Array.isArray(tests) && tests.length > 0) {
             responseForReport = await createNewReportDb(createdPatient.id, tests, req.labId);
+        }
+
+        if (createdPatient?.mobileNumber) {
+            try {
+                await sendPatientRegistrationMessage(
+                    createdPatient.mobileNumber,
+                    patientName || createdPatient.patientName || "Patient",
+                    req.labName || "Queueless"
+                );
+            } catch (whatsappError) {
+                console.error("Patient registration WhatsApp failed:", whatsappError.message);
+            }
         }
 
         return sendResponse(req, res, response.statusCode, response.message);

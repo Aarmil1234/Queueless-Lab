@@ -34,6 +34,39 @@ const fs = require("fs");
 
 const AIBOTIC_URL = "https://app.aibotick.com/api/v1/whatsapp/";
 
+const sendPatientRegistrationMessage = async (mobileNumber, patientName, labName) => {
+    try {
+        const phone = mobileNumber && mobileNumber.startsWith("+")
+            ? mobileNumber
+            : `+${mobileNumber}`;
+
+        const apiToken = process.env.AIBOTICK_API_KEY;
+        const phoneNumberId = process.env.PHONE_NUMBER_ID;
+
+        const response = await axios.get(
+            "https://app.aibotick.com/api/v1/whatsapp/send/template",
+            {
+                params: {
+                    apiToken,
+                    phone_number_id: phoneNumberId,
+                    template_id: 356612,
+                    phone_number: phone,
+                    "templateVariable-name-1": patientName,
+                    "templateVariable-name-2": labName || "Queueless"
+                }
+            }
+        );
+
+        return response.data;
+    } catch (error) {
+        console.error(
+            "WhatsApp registration message error:",
+            error.response?.data || error.message
+        );
+        throw error;
+    }
+};
+
 const sendWhatsAppMessages = async (type, numbers, data) => {
     try {
         switch (type) {
@@ -214,5 +247,6 @@ const sendWhatsAppMessages = async (type, numbers, data) => {
 // };
 
 module.exports = {
-    sendWhatsAppMessages
+    sendWhatsAppMessages,
+    sendPatientRegistrationMessage
 };
