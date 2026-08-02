@@ -1,6 +1,6 @@
 const { sendResponse } = require("../../utils/sendResponse");
 const mongoose = require('mongoose');
-const { addPatientReportDb, getAllPatientReportDB, getReportByIdDB, getTestsListForReportDb, createNewReportDb } = require("../../db/report/report");
+const { addPatientReportDb, getAllPatientReportDB, getReportByIdDB, getTestsListForReportDb, createNewReportDb, saveReportPdfMetadataDb } = require("../../db/report/report");
 const { validateParameterRanges, updateParameterStatus } = require("../../utils/parameterRangeValidator");
 const Report = require("../../models/reports");
 const PatientModal = require("../../models/patient");
@@ -82,6 +82,7 @@ const addPatientReportOld = async (req, res) => {
 
         // Build the report object for PDF with real patient data
         const reportForPDF = {
+            labId,
             patientName:  patient.name || patient.patientName || "",
             mobileNumber: patient.mobileNumber || "",
             gender:       patient.gender || "",
@@ -155,6 +156,14 @@ const addPatientReportOld = async (req, res) => {
         });
         
         const pdfUrl = uploadResult.secure_url;
+
+        const pdfMetadataResult = await saveReportPdfMetadataDb(savedReport._id, labId, {
+            pdfUrl
+        });
+
+        if (!pdfMetadataResult?.success) {
+            console.error("Failed to save PDF metadata to report:", pdfMetadataResult?.error || pdfMetadataResult?.message);
+        }
 
         // Send WhatsApp — wrapped so a failure doesn't roll back the saved report
         let whatsappError = null;
@@ -264,6 +273,7 @@ const addPatientReport = async (req, res) => {
 
         // Construct structural map for multi-test report generation
         const reportForPDF = {
+            labId,
             patientName: patient.name || patient.patientName || "",
             mobileNumber: patient.mobileNumber || "",
             gender: patient.gender || "",
@@ -331,6 +341,14 @@ const addPatientReport = async (req, res) => {
         });
         
         const pdfUrl = uploadResult.secure_url;
+
+        const pdfMetadataResult = await saveReportPdfMetadataDb(savedReport._id, labId, {
+            pdfUrl
+        });
+
+        if (!pdfMetadataResult?.success) {
+            console.error("Failed to save PDF metadata to report:", pdfMetadataResult?.error || pdfMetadataResult?.message);
+        }
 
         let whatsappError = null;
         try {
@@ -910,11 +928,29 @@ async function getAllPatientReport(req, res) {
 
 async function getReportById(req, res) {
     try {
-        const { reportId } = req.params;
+        const reportId = req.params?.reportId || req.query?.reportId || req.body?.reportId;
         const labId = req.labId;
-        
+
+        if (!reportId) {
+            return sendResponse(req, res, 400, {
+                success: false,
+                message: 'reportId is required'
+            });
+        }
+
         const result = await getReportByIdDB(reportId, labId);
-        return sendResponse(req, res, 200, result);
+
+        if (!result) {
+            return sendResponse(req, res, 404, {
+                success: false,
+                message: 'Report not found'
+            });
+        }
+
+        return sendResponse(req, res, 200, {
+            success: true,
+            data: result
+        });
     } catch (error) {
         return sendResponse(req, res, 500, {
             success: false,

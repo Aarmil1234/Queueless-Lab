@@ -209,7 +209,6 @@ async function getAllPatientReportDB(labId) {
 
         // Combine the data
         const result = reports.map(report => {
-            // Convert testReport Map to object if it's a Map
             let testReport = {};
             if (report.testReport && report.testReport instanceof Map) {
                 testReport = Object.fromEntries(report.testReport);
@@ -224,6 +223,7 @@ async function getAllPatientReportDB(labId) {
                 createdAt: report.createdAt,
                 updatedAt: report.updatedAt,
                 __v: report.__v,
+                pdfUrl: report.pdfUrl || null,
                 patientDetails: patientMap.get(report.patientId.toString()) || {
                     patientName: 'Unknown',
                     mobileNumber: 'N/A',
@@ -250,14 +250,14 @@ async function getReportByIdDB(reportId, labId) {
         const report = await Report.findOne({ _id: reportId, labId });
 
         if (!report) {
-            return [];
+            return null;
         }
 
         // Fetch patient details including referredByDoctor
         const patient = await Patient.findById(report.patientId);
 
         if (!patient) {
-            return [];
+            return null;
         }
 
         // Get the report as a plain object
@@ -280,6 +280,7 @@ async function getReportByIdDB(reportId, labId) {
             createdAt: reportObject.createdAt,
             updatedAt: reportObject.updatedAt,
             __v: reportObject.__v,
+            pdfUrl: reportObject.pdfUrl || null,
             patientDetails: {
                 patientName: patient.patientName,
                 mobileNumber: patient.mobileNumber,
@@ -290,7 +291,44 @@ async function getReportByIdDB(reportId, labId) {
         return result;
     } catch (error) {
         console.error('Error in getReportByIdDB:', error);
-        return [];
+        return null;
+    }
+}
+
+async function saveReportPdfMetadataDb(reportId, labId, pdfData = {}) {
+    try {
+        const update = {
+            $set: {
+                pdfUrl: pdfData.pdfUrl || null
+            }
+        };
+
+        const report = await Report.findByIdAndUpdate(
+            reportId,
+            update,
+            {
+                new: true,
+                runValidators: true
+            }
+        );
+
+        if (!report) {
+            return {
+                success: false,
+                message: 'Report not found'
+            };
+        }
+
+        return {
+            success: true,
+            data: report
+        };
+    } catch (error) {
+        console.error('Error in saveReportPdfMetadataDb:', error);
+        return {
+            success: false,
+            error: error.message
+        };
     }
 }
 
@@ -384,6 +422,7 @@ async function getTestsListForReportDb(patientId, status, labId) {
                 id: test._id ? test._id.toString() : null,
                 name: test.testName,
                 reportId: report._id.toString(),
+                pdfUrl: report.pdfUrl || null,
                 reportDate: report.createdAt
             }));
 
@@ -417,5 +456,6 @@ module.exports = {
     getAllPatientReportDB,
     getReportByIdDB,
     getTestsListForReportDb,
-    createNewReportDb
+    createNewReportDb,
+    saveReportPdfMetadataDb
 };

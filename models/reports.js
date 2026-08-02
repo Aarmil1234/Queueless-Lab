@@ -71,6 +71,10 @@ const reportSchema = new Schema({
     testReport: {
         type: [testEntrySchema],
         default: []
+    },
+    pdfUrl: {
+        type: String,
+        default: null
     }
 }, {
     timestamps: true,

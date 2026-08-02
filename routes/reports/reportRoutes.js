@@ -11,7 +11,9 @@ router.use(authMiddleware);
 
 router.post('/testWise', uploadDoc.single('document'), reportController.addPatientReport);
 router.post('/create', reportController.createNewReport);
+router.post('/getById', reportController.getReportById);
 router.get('/getSingleReport/:reportId', reportController.getReportById);
+router.get('/getById/:reportId', reportController.getReportById);
 router.get('/getTestsList/:patientId/:status', reportController.getTestsListReport);
 router.get('/:patientId', reportController.getPatientReport);
 router.get('/', reportController.getAllPatientReport);
