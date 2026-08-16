@@ -3,11 +3,13 @@ const {
     addParameterDb,
     updateParameterDb,
     getAllParametersDb,
+    getParametersByTestReportIdDb,
     getParameterByIdDb,
     deleteParameterDb
 } = require("../../db/parameter/parameter");
 
 const sanitizeParameterPayload = (payload = {}) => ({
+    ...(payload.testReportId && { testReportId: payload.testReportId }),
     ...(payload.code && { code: payload.code.trim().toUpperCase() }),
     ...(payload.name && { name: payload.name.trim() }),
     ...(payload.category && { category: payload.category.trim() }),
@@ -70,6 +72,19 @@ async function getParameterById(req, res) {
     }
 }
 
+async function getParametersByTestReportId(req, res) {
+    try {
+        const { testReportId } = req.params;
+        const response = await getParametersByTestReportIdDb(testReportId, req.labId);
+        if(response.length > 0){
+            return sendResponse(req, res, 200, response);
+        }
+        return sendResponse(req, res, 404, "No parameters found for this test report");
+    } catch (error) {
+        return sendResponse(req, res, 500, error.message);
+    }
+}
+
 async function deleteParameter(req, res) {
     try {
         const { id } = req.params;
@@ -85,5 +100,6 @@ module.exports = {
     updateParameter,
     getAllParameters,
     getParameterById,
+    getParametersByTestReportId,
     deleteParameter
 };

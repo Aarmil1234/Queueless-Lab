@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
 const Schema = mongoose.Schema;
 
 const laboratoryOwnerSchema = new Schema({
@@ -35,7 +36,7 @@ const laboratoryOwnerSchema = new Schema({
     },
     password: {
         type: String,
-        required: false,
+        required: [true, 'Password is required'],
         select: false
     },
     token: {
@@ -53,10 +54,17 @@ const laboratoryOwnerSchema = new Schema({
 // Add index for frequently queried fields
 laboratoryOwnerSchema.index({ email: 1, mobileNumber: 1 });
 
+// Hash password before saving, only when it has been modified
+laboratoryOwnerSchema.pre('save', async function() {
+    if (!this.isModified('password') || !this.password) {
+        return;
+    }
+    this.password = await bcrypt.hash(this.password, 10);
+});
+
 // Method to compare password
 laboratoryOwnerSchema.methods.comparePassword = async function(candidatePassword) {
-    // return await bcrypt.compare(candidatePassword, this.password);
-    return true; // Implement actual password comparison
+    return await bcrypt.compare(candidatePassword, this.password);
 };
 
 const LaboratoryOwner = mongoose.model('LaboratoryOwner', laboratoryOwnerSchema);

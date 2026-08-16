@@ -8,26 +8,26 @@ const path = require("path");
 
 const createNewReport = async (req, res) => {
     try {
-        const { patientId, tests } = req.body;
+        const { patientId, testReports } = req.body;
         const labId = req.labId;
-        
-        // Support both string array and object array for tests
-        if (tests && Array.isArray(tests)) {
-            for (const test of tests) {
-                if (typeof test === 'object' && test.testId) {
-                    // Validate testId format if provided
-                    if (!mongoose.Types.ObjectId.isValid(test.testId)) {
+
+        // Support both string array and object array for testReports
+        if (testReports && Array.isArray(testReports)) {
+            for (const testReport of testReports) {
+                if (typeof testReport === 'object' && testReport.testReportId) {
+                    // Validate testReportId format if provided
+                    if (!mongoose.Types.ObjectId.isValid(testReport.testReportId)) {
                         return sendResponse(req, res, 400, {
                             success: false,
-                            message: 'Invalid testId format'
+                            message: 'Invalid testReportId format'
                         });
                     }
                 }
             }
         }
-        
-        const result = await createNewReportDb(patientId, tests, labId);
-        
+
+        const result = await createNewReportDb(patientId, testReports, labId);
+
         return sendResponse(req, res, result.statusCode, result.data);
     } catch (error) {
         return sendResponse(req, res, 500, {

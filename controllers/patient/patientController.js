@@ -6,7 +6,7 @@ const { sendPatientRegistrationMessage } = require("../../services/whatsappServi
 
 const addPatient = async (req, res) => {
     try {
-        const { patientName, gender, dateOfBirth, age, referredByDoctor, doctorContactNo, address, city, mobileNumber, tests } = req.body;
+        const { patientName, gender, dateOfBirth, age, referredByDoctor, doctorContactNo, address, city, mobileNumber, testReports } = req.body;
         const patientData = {
             patientName,
             gender,
@@ -17,7 +17,7 @@ const addPatient = async (req, res) => {
             address,
             city,
             mobileNumber,
-            tests,
+            testReports,
             labId: req.labId
         }
         const response = await addPatientDb(patientData);
@@ -28,8 +28,8 @@ const addPatient = async (req, res) => {
         const createdPatient = response.data;
 
         let responseForReport;
-        if (Array.isArray(tests) && tests.length > 0) {
-            responseForReport = await createNewReportDb(createdPatient.id, tests, req.labId);
+        if (Array.isArray(testReports) && testReports.length > 0) {
+            responseForReport = await createNewReportDb(createdPatient.id, testReports, req.labId);
         }
 
         if (createdPatient?.mobileNumber) {

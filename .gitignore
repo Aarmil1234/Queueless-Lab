@@ -9,6 +9,8 @@ pnpm-debug.log*
 logs/
 *.log
 
+Queueless-Lab-Front.rar
+
 # ================================
 # Environment variables
 # ================================

@@ -8,7 +8,7 @@ const Report = require("../../models/reports");
 const addPatientDb = async (data) => {
     try {
 
-        let { patientName, gender, dateOfBirth, age, referredByDoctor, doctorContactNo, address, mobileNumber, tests, city, labId } = data;
+        let { patientName, gender, dateOfBirth, age, referredByDoctor, doctorContactNo, address, mobileNumber, testReports, city, labId } = data;
 
         // const existingPatient = await Patient.findOne({ mobileNumber, labId });
         // if (existingPatient) {
@@ -24,7 +24,7 @@ const addPatientDb = async (data) => {
 
         //generate case id randonmly as of now
         const caseId = "CASE-" + Math.floor(Math.random() * 1000000);
-        const patient = new Patient({ caseId, patientName, gender, dateOfBirth, age, referredByDoctor, doctorContactNo, address, mobileNumber, tests, city, labId });
+        const patient = new Patient({ caseId, patientName, gender, dateOfBirth, age, referredByDoctor, doctorContactNo, address, mobileNumber, testReports, city, labId });
         await patient.save();
         return {
             ...Responses.success,
@@ -39,7 +39,7 @@ const addPatientDb = async (data) => {
                 doctorContactNo: patient.doctorContactNo,
                 address: patient.address,
                 mobileNumber: patient.mobileNumber,
-                tests: patient.tests,
+                testReports: patient.testReports,
                 city: patient.city
             }
         };

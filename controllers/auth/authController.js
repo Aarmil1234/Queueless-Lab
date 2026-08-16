@@ -7,6 +7,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 async function login(req, res) {
     try {
         const { labMobileNumber } = req.body;
+        const { password } = req.body;
 
         // Validate input
         if (!labMobileNumber) {
@@ -16,9 +17,17 @@ async function login(req, res) {
             });
         }
 
-        // Find user by email
-        const owner = await LaboratoryOwner.findOne({ labMobileNumber, isActive: true });
-        if (!owner) {
+        // Validate input
+        if (!password) {
+            return sendResponse(req, res, 400, {
+                success: false,
+                message: 'Password is required'
+            });
+        }
+
+        // Find user by mobile number (password is compared separately since it's hashed)
+        const owner = await LaboratoryOwner.findOne({ labMobileNumber, isActive: true }).select('+password');
+        if (!owner || !(await owner.comparePassword(password))) {
             return sendResponse(req, res, 401, {
                 success: false,
                 message: 'Invalid credentials'
@@ -64,6 +73,14 @@ async function signup(req, res) {
     try {
         const { labName, ownerName, mobileNumber, labMobileNumber, email, password } = req.body;
 
+        // Validate input
+        if (!password) {
+            return sendResponse(req, res, 400, {
+                success: false,
+                message: 'Password is required'
+            });
+        }
+
         // Check if user already exists
         const existingUser = await LaboratoryOwner.findOne({
             $or: [{ email }, { mobileNumber }]
@@ -92,7 +109,7 @@ async function signup(req, res) {
         const token = jwt.sign(
             { id: newOwner._id, email: newOwner.email, labId: newOwner._id },
             JWT_SECRET,
-            { expiresIn: '24h' }
+            { expiresIn: '24h' } // remove if don't want to expire
         );
 
         newOwner.token = token;

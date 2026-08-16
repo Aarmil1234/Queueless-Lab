@@ -4,7 +4,7 @@ const Report = require("../../models/reports");
 const Patient = require("../../models/patient");
 const Parameter = require("../../models/parameter");
 const ParameterSubCategory = require("../../models/parameterSubCategoryModel");
-const Test = require("../../models/test");
+const TestReport = require("../../models/testReport");
 
 const addPatientReportDb = async (data) => {
     try {
@@ -332,22 +332,33 @@ async function saveReportPdfMetadataDb(reportId, labId, pdfData = {}) {
     }
 }
 
-async function createNewReportDb(patientId, tests, labId) {
+async function createNewReportDb(patientId, testReports, labId) {
     try {
-        // Create formatted tests array if tests are provided
+        // Create formatted test entries array if testReports are provided
         let testReport = [];
-        if (Array.isArray(tests) && tests.length > 0) {
-            testReport = await Promise.all(tests.map(async (testItem) => {
-                const testName = typeof testItem === 'string' ? testItem : testItem.testName;
-                const testId = typeof testItem === 'object' && testItem.testId ? testItem.testId : null;
-                
+        if (Array.isArray(testReports) && testReports.length > 0) {
+            testReport = await Promise.all(testReports.map(async (testReportItem) => {
+                const testReportId = typeof testReportItem === 'string'
+                    ? testReportItem
+                    : testReportItem.testReportId;
+
+                let testName = typeof testReportItem === 'object' ? testReportItem.testName : null;
                 let testParameters = [];
-                
-                // If testId is provided, fetch test parameters dynamically
-                if (testId) {
-                    const test = await Test.findById(testId).populate('parameters');
-                    if (test && test.parameters) {
-                        testParameters = test.parameters.map(param => ({
+
+                // If testReportId is provided, fetch its parameters dynamically
+                if (testReportId) {
+                    const matchedTestReport = await TestReport.findOne({ _id: testReportId, labId, delete: false });
+                    if (matchedTestReport) {
+                        testName = testName || matchedTestReport.testName;
+
+                        const parameters = await Parameter.find({
+                            testReportId,
+                            labId,
+                            delete: false,
+                            isActive: true
+                        });
+
+                        testParameters = parameters.map(param => ({
                             parameterId: param._id,
                             subCategoryId: null,
                             value: null,
@@ -357,10 +368,10 @@ async function createNewReportDb(patientId, tests, labId) {
                         }));
                     }
                 }
-                
+
                 return {
                     testName,
-                    testId,
+                    testReportId,
                     testResult: {}, // Keep for backward compatibility
                     testParameters // New dynamic structure
                 };

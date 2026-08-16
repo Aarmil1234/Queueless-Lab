@@ -3,7 +3,20 @@ const { Responses } = require('../../utils/responses');
 
 async function getAllParametersDb(labId) {
     try {
-        const parameters = await Parameter.find({ labId, delete: false }).sort({ create: -1 });
+        const parameters = await Parameter.find({ labId, delete: false })
+            .populate('testReportId', 'code testName category')
+            .sort({ createdAt: -1 });
+        return parameters;
+    } catch (error) {
+        return [];
+    }
+}
+
+async function getParametersByTestReportIdDb(testReportId, labId) {
+    try {
+        const parameters = await Parameter.find({ testReportId, labId, delete: false })
+            .populate('testReportId', 'code testName category')
+            .sort({ createdAt: -1 });
         return parameters;
     } catch (error) {
         return [];
@@ -12,8 +25,9 @@ async function getAllParametersDb(labId) {
 
 async function getParameterByIdDb(id, labId) {
     try {
-        const parameter = await Parameter.findOne({ _id: id, labId });
-        return [parameter];
+        const parameter = await Parameter.findOne({ _id: id, labId })
+            .populate('testReportId', 'code testName category');
+        return parameter ? [parameter] : [];
     } catch (error) {
         return [];
     }
@@ -21,13 +35,14 @@ async function getParameterByIdDb(id, labId) {
 
 async function addParameterDb(data) {
     try {
-        //check if parameter with same code already exists 
+        //check if parameter with same code already exists under the same test report
         const existingParameter = await Parameter.findOne({
+            testReportId: data.testReportId,
             code: { $regex: new RegExp(`^${data.code}$`, 'i') },
             labId: data.labId,
             delete: false
         });
-        
+
         if (existingParameter) {
             return Responses.alreadyExist;
         }
@@ -36,7 +51,7 @@ async function addParameterDb(data) {
         await parameter.save();
         return Responses.success;
     } catch (error) {
-        return Responses.tryAgain;
+        return { ...Responses.tryAgain, error: error.message };
     }
 }
 
@@ -47,9 +62,10 @@ async function updateParameterDb(id, data, labId) {
         if (!existingParameter) {
             return Responses.notFound;
         }
-        // If code is being updated, check for duplicates
+        // If code is being updated, check for duplicates within the same test report
         if (data.code && data.code !== existingParameter.code) {
             const codeExists = await Parameter.findOne({
+                testReportId: data.testReportId || existingParameter.testReportId,
                 code: data.code,
                 labId,
                 _id: { $ne: id },
@@ -58,7 +74,7 @@ async function updateParameterDb(id, data, labId) {
             if (codeExists) {
                 return {
                     ...Responses.alreadyExist,
-                    clientMessage: { Message: 'Another parameter with this code already exists' }
+                    clientMessage: { Message: 'A parameter with this code already exists for the specified test report' }
                 };
             }
         }
@@ -72,7 +88,7 @@ async function updateParameterDb(id, data, labId) {
         ).lean();
         return Responses.success;
     } catch (error) {
-        return Responses.tryAgain;
+        return { ...Responses.tryAgain, error: error.message };
     }
 }
 
@@ -92,8 +108,9 @@ async function deleteParameterDb(id, labId) {
 
 module.exports = {
     getAllParametersDb,
+    getParametersByTestReportIdDb,
     getParameterByIdDb,
     addParameterDb,
     updateParameterDb,
     deleteParameterDb
-}
+};

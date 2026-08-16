@@ -9,6 +9,7 @@ const router = express.Router();
 router.use(authMiddleware);
 
 router.get('/', parameterController.getAllParameters);
+router.get('/byTestReport/:testReportId', parameterController.getParametersByTestReportId);
 router.get('/:id', parameterController.getParameterById);
 router.post('/add', parameterController.addParameter);
 router.put('/:id', parameterController.updateParameter);

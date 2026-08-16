@@ -35,9 +35,9 @@ const testEntrySchema = new Schema({
         type: String,
         required: true
     },
-    testId: {
+    testReportId: {
         type: Schema.Types.ObjectId,
-        ref: 'Test',
+        ref: 'TestReport',
         default: null
     },
     isReportSubmitted: { type : Boolean, required: true, default : false},
