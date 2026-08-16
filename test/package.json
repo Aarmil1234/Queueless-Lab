@@ -1,0 +1,18 @@
+{
+  "name": "dynamic-parameter-system-tests",
+  "version": "1.0.0",
+  "description": "Test suite for dynamic parameter system",
+  "main": "dynamicParameterSystem.js",
+  "scripts": {
+    "test": "node dynamicParameterSystem.js",
+    "test:cleanup": "node -e \"require('./dynamicParameterSystem').cleanup()\""
+  },
+  "dependencies": {
+    "mongoose": "^7.0.0",
+    "dotenv": "^16.0.0"
+  },
+  "devDependencies": {},
+  "keywords": ["test", "dynamic", "parameter", "medical", "report"],
+  "author": "Queueless Lab Team",
+  "license": "MIT"
+}
