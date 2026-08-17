@@ -3,10 +3,14 @@ const Report = require("../../models/reports");
 const Patient = require("../../models/patient");
 const mongoose = require('mongoose');
 
-async function doctorWisePatientDb(labId) {
+async function doctorWisePatientDb(labId, dateRange) {
     try {
+        const match = { labId };
+        if (dateRange) {
+            match.createdAt = { $gte: dateRange.start, $lte: dateRange.end };
+        }
         const result = await Patient.aggregate([
-            { $match: { labId } },
+            { $match: match },
             {
                 $group: {
                     _id: {
@@ -33,9 +37,13 @@ async function doctorWisePatientDb(labId) {
     }
 }
 
-async function getTotalPatientCount(labId) {    
+async function getTotalPatientCount(labId, dateRange) {
     try {
-        const count = await Patient.countDocuments({ labId });
+        const match = { labId };
+        if (dateRange) {
+            match.createdAt = { $gte: dateRange.start, $lte: dateRange.end };
+        }
+        const count = await Patient.countDocuments(match);
         return count;
     } catch (error) {
         console.error('Error in getTotalPatientCount:', error);
@@ -43,21 +51,23 @@ async function getTotalPatientCount(labId) {
     }
 }
 
-async function testWisePatientDb(labId) {
+async function testWisePatientDb(labId, dateRange) {
     try {
-        const data = await Report.find({ labId });
-        console.log("find result:", data.length);
+        const matchStage = {
+            $expr: {
+                $eq: [
+                    { $toString: "$labId" },
+                    labId.toString()
+                ]
+            }
+        };
+        if (dateRange) {
+            matchStage.createdAt = { $gte: dateRange.start, $lte: dateRange.end };
+        }
 
         const result = await Report.aggregate([
             {
-                $match: {
-                    $expr: {
-                        $eq: [
-                            { $toString: "$labId" },
-                            labId.toString()
-                        ]
-                    }
-                }
+                $match: matchStage
             },
             { $unwind: "$testReport" },
             {
@@ -84,23 +94,29 @@ async function testWisePatientDb(labId) {
     }
 }
 
-async function weeklyReportDataDb(labId) {
+async function weeklyReportDataDb(labId, dateRange) {
     try {
-        const today = new Date();
+        let start, end;
 
-        // Get current day index (0=Sun, 1=Mon, ...)
-        const dayIndex = today.getDay();
+        if (dateRange) {
+            start = dateRange.start;
+            end = dateRange.end;
+        } else {
+            const today = new Date();
 
-        // Calculate Monday of current week
-        const diffToMonday = dayIndex === 0 ? -6 : 1 - dayIndex;
+            // Get current day index (0=Sun, 1=Mon, ...)
+            const dayIndex = today.getDay();
 
-        const monday = new Date(today);
-        monday.setDate(today.getDate() + diffToMonday);
-        monday.setHours(0, 0, 0, 0);
+            // Calculate Monday of current week
+            const diffToMonday = dayIndex === 0 ? -6 : 1 - dayIndex;
 
-        // Today end time
-        const endOfToday = new Date();
-        endOfToday.setHours(23, 59, 59, 999);
+            start = new Date(today);
+            start.setDate(today.getDate() + diffToMonday);
+            start.setHours(0, 0, 0, 0);
+
+            end = new Date();
+            end.setHours(23, 59, 59, 999);
+        }
 
         // Aggregate report count grouped by day
         const result = await Report.aggregate([
@@ -113,8 +129,8 @@ async function weeklyReportDataDb(labId) {
                         ]
                     },
                     createdAt: {
-                        $gte: monday,
-                        $lte: endOfToday
+                        $gte: start,
+                        $lte: end
                     }
                 }
             },
@@ -163,19 +179,23 @@ async function weeklyReportDataDb(labId) {
     }
 }
 
-async function cityWiseReportDataDb(labId) {
+async function cityWiseReportDataDb(labId, dateRange) {
     try {
+        const matchStage = {
+            $expr: {
+                $eq: [
+                    { $toString: "$labId" },
+                    labId.toString()
+                ]
+            }
+        };
+        if (dateRange) {
+            matchStage.createdAt = { $gte: dateRange.start, $lte: dateRange.end };
+        }
 
         const result = await Report.aggregate([
-            { 
-                $match: {
-                    $expr: {
-                        $eq: [
-                            { $toString: "$labId" },
-                            labId.toString()
-                        ]
-                    }
-                }
+            {
+                $match: matchStage
             },
             {
                 $addFields: {
