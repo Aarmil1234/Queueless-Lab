@@ -1,8 +1,16 @@
 const { sendResponse } = require("../../utils/sendResponse");
 const LaboratoryOwner = require("../../models/laboratoryOwner");
+const { sendOtpSms } = require("../../services/smsService");
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const OTP_EXPIRY_MINUTES = 10;
+
+function generateOtp() {
+    return crypto.randomInt(100000, 1000000).toString();
+}
 
 async function login(req, res) {
     try {
@@ -140,7 +148,142 @@ async function signup(req, res) {
     }
 }
 
+async function forgetPassword(req, res) {
+    try {
+        const { labMobileNumber } = req.body;
+
+        if (!labMobileNumber) {
+            return sendResponse(req, res, 400, {
+                success: false,
+                message: 'Mobile number is required'
+            });
+        }
+
+        const owner = await LaboratoryOwner.findOne({ labMobileNumber, isActive: true });
+        if (!owner) {
+            return sendResponse(req, res, 404, {
+                success: false,
+                message: 'No account found with this mobile number'
+            });
+        }
+
+        const otp = generateOtp();
+        owner.resetOtp = await bcrypt.hash(otp, 10);
+        owner.resetOtpExpiry = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
+        await owner.save({ validateBeforeSave: false });
+
+        await sendOtpSms(owner.labMobileNumber, otp);
+
+        return sendResponse(req, res, 200, {
+            success: true,
+            message: 'OTP sent successfully to registered mobile number'
+        });
+
+    } catch (error) {
+        console.error('Forget password error:', error);
+        return sendResponse(req, res, 500, {
+            success: false,
+            message: 'Server error while sending OTP',
+            error: error.message
+        });
+    }
+}
+
+async function resetPassword(req, res) {
+    try {
+        const { labMobileNumber, otp, newPassword } = req.body;
+
+        if (!labMobileNumber || !otp || !newPassword) {
+            return sendResponse(req, res, 400, {
+                success: false,
+                message: 'Mobile number, OTP and new password are required'
+            });
+        }
+
+        const owner = await LaboratoryOwner.findOne({ labMobileNumber, isActive: true }).select('+resetOtp +resetOtpExpiry');
+        if (!owner || !owner.resetOtp || !owner.resetOtpExpiry) {
+            return sendResponse(req, res, 400, {
+                success: false,
+                message: 'No OTP request found. Please request a new OTP'
+            });
+        }
+
+        if (owner.resetOtpExpiry < new Date()) {
+            return sendResponse(req, res, 400, {
+                success: false,
+                message: 'OTP has expired. Please request a new OTP'
+            });
+        }
+
+        const isOtpValid = await bcrypt.compare(otp, owner.resetOtp);
+        if (!isOtpValid) {
+            return sendResponse(req, res, 400, {
+                success: false,
+                message: 'Invalid OTP'
+            });
+        }
+
+        owner.password = newPassword;
+        owner.resetOtp = undefined;
+        owner.resetOtpExpiry = undefined;
+        await owner.save();
+
+        return sendResponse(req, res, 200, {
+            success: true,
+            message: 'Password reset successful'
+        });
+
+    } catch (error) {
+        console.error('Reset password error:', error);
+        return sendResponse(req, res, 500, {
+            success: false,
+            message: 'Server error while resetting password',
+            error: error.message
+        });
+    }
+}
+
+async function updatePassword(req, res) {
+    try {
+        const { currentPassword, newPassword } = req.body;
+
+        if (!currentPassword || !newPassword) {
+            return sendResponse(req, res, 400, {
+                success: false,
+                message: 'Current password and new password are required'
+            });
+        }
+
+        const owner = await LaboratoryOwner.findById(req.labId).select('+password');
+        if (!owner || !(await owner.comparePassword(currentPassword))) {
+            return sendResponse(req, res, 401, {
+                success: false,
+                message: 'Current password is incorrect'
+            });
+        }
+
+        owner.password = newPassword;
+        await owner.save();
+
+        return sendResponse(req, res, 200, {
+            success: true,
+            message: 'Password updated successfully'
+        });
+
+    } catch (error) {
+        console.error('Update password error:', error);
+        return sendResponse(req, res, 500, {
+            success: false,
+            message: 'Server error while updating password',
+            error: error.message
+        });
+    }
+}
+
 module.exports = {
     login,
-    signup
+    signup,
+    forgetPassword,
+    resetPassword,
+    updatePassword
 };

@@ -43,6 +43,14 @@ const laboratoryOwnerSchema = new Schema({
         type: String,
         default: null
     },
+    resetOtp: {
+        type: String,
+        select: false
+    },
+    resetOtpExpiry: {
+        type: Date,
+        select: false
+    },
     isActive: {
         type: Boolean,
         default: true

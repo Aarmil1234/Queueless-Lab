@@ -579,6 +579,94 @@
 				"description": "Get parameter ranges for hemoglobin"
 			},
 			"response": []
+		},
+		{
+			"name": "16. Forget Password - Send OTP",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"labMobileNumber\": \"+0987654321\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/auth/forget-password",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"auth",
+						"forget-password"
+					]
+				},
+				"description": "Send an OTP via SMS to the lab's registered mobile number to begin a password reset"
+			},
+			"response": []
+		},
+		{
+			"name": "17. Reset Password - Verify OTP",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"labMobileNumber\": \"+0987654321\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"newSecurePassword123\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/auth/reset-password",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"auth",
+						"reset-password"
+					]
+				},
+				"description": "Verify the OTP sent to the lab's mobile number and set a new password"
+			},
+			"response": []
+		},
+		{
+			"name": "18. Update Password",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"currentPassword\": \"securePassword123\",\n  \"newPassword\": \"newSecurePassword123\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/auth/update-password",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"auth",
+						"update-password"
+					]
+				},
+				"description": "Update password for the currently authenticated lab owner (requires current password)"
+			},
+			"response": []
 		}
 	],
 	"event": [
