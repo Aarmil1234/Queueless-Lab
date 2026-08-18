@@ -172,7 +172,7 @@ async function forgetPassword(req, res) {
         owner.resetOtpExpiry = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
         await owner.save({ validateBeforeSave: false });
 
-        await sendOtpSms(owner.labMobileNumber, otp);
+        await sendOtpSms(owner.labMobileNumber);
 
         return sendResponse(req, res, 200, {
             success: true,
