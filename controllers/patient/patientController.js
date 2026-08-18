@@ -30,6 +30,13 @@ const addPatient = async (req, res) => {
         let responseForReport;
         if (Array.isArray(testReports) && testReports.length > 0) {
             responseForReport = await createNewReportDb(createdPatient.id, testReports, req.labId);
+            if (!responseForReport?.success) {
+                console.error(
+                    "Failed to create report for patient",
+                    createdPatient.id,
+                    responseForReport?.error || responseForReport?.message
+                );
+            }
         }
 
         if (createdPatient?.mobileNumber) {
@@ -44,7 +51,13 @@ const addPatient = async (req, res) => {
             }
         }
 
-        return sendResponse(req, res, response.statusCode, response.message);
+        return sendResponse(req, res, response.statusCode, {
+            message: response.message,
+            ...(responseForReport && !responseForReport.success && {
+                reportWarning: "Patient added, but attaching the selected test reports failed: " +
+                    (responseForReport.error || responseForReport.message)
+            })
+        });
     } catch (e) {
         console.error(e);
         return sendResponse(req, res, 500, { Message: e.message });

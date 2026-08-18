@@ -66,17 +66,27 @@ const getPatientsWithPendingReportsDb = async (labId) => {
         const reportsWithPendingTests = await Report.find({
             'testReport.isReportSubmitted': false,
             labId
-        }).select('patientId id');
+        }).select('patientId testReport');
 
-        // Extract unique patient IDs and create a map of patientId to reportIds
+        // Extract unique patient IDs and create a map of patientId to reportIds/pendingTests
         const patientIds = [...new Set(reportsWithPendingTests.map(report => report.patientId))];
         const patientReportMap = {};
-        
+
         reportsWithPendingTests.forEach(report => {
             if (!patientReportMap[report.patientId]) {
-                patientReportMap[report.patientId] = [];
+                patientReportMap[report.patientId] = { reportIds: [], pendingTests: [] };
             }
-            patientReportMap[report.patientId].push(report.id);
+            patientReportMap[report.patientId].reportIds.push(report.id);
+
+            report.testReport
+                .filter(test => test.isReportSubmitted === false)
+                .forEach(test => {
+                    patientReportMap[report.patientId].pendingTests.push({
+                        reportId: report.id,
+                        testReportId: test.testReportId,
+                        testName: test.testName
+                    });
+                });
         });
 
         // Find patients with those IDs
@@ -85,10 +95,11 @@ const getPatientsWithPendingReportsDb = async (labId) => {
             labId
         });
 
-        // Add reportIds to each patient
+        // Add reportIds and pending test names to each patient
         const patientsWithReportIds = patients.map(patient => ({
             ...patient.toObject(),
-            reportIds: patientReportMap[patient._id] || []
+            reportIds: patientReportMap[patient._id]?.reportIds || [],
+            pendingTests: patientReportMap[patient._id]?.pendingTests || []
         }));
 
         return patientsWithReportIds;
@@ -104,17 +115,27 @@ const getPatientsWithSubmittedReportsDb = async (labId) => {
         const reportsWithSubmittedTests = await Report.find({
             'testReport.isReportSubmitted': true,
             labId
-        }).select('patientId id');
+        }).select('patientId testReport');
 
-        // Extract unique patient IDs and create a map of patientId to reportIds
+        // Extract unique patient IDs and create a map of patientId to reportIds/submittedTests
         const patientIds = [...new Set(reportsWithSubmittedTests.map(report => report.patientId))];
         const patientReportMap = {};
-        
+
         reportsWithSubmittedTests.forEach(report => {
             if (!patientReportMap[report.patientId]) {
-                patientReportMap[report.patientId] = [];
+                patientReportMap[report.patientId] = { reportIds: [], submittedTests: [] };
             }
-            patientReportMap[report.patientId].push(report.id);
+            patientReportMap[report.patientId].reportIds.push(report.id);
+
+            report.testReport
+                .filter(test => test.isReportSubmitted === true)
+                .forEach(test => {
+                    patientReportMap[report.patientId].submittedTests.push({
+                        reportId: report.id,
+                        testReportId: test.testReportId,
+                        testName: test.testName
+                    });
+                });
         });
 
         // Find patients with those IDs
@@ -123,10 +144,11 @@ const getPatientsWithSubmittedReportsDb = async (labId) => {
             labId
         });
 
-        // Add reportIds to each patient
+        // Add reportIds and submitted test names to each patient
         const patientsWithReportIds = patients.map(patient => ({
             ...patient.toObject(),
-            reportIds: patientReportMap[patient._id] || []
+            reportIds: patientReportMap[patient._id]?.reportIds || [],
+            submittedTests: patientReportMap[patient._id]?.submittedTests || []
         }));
 
         return patientsWithReportIds;
