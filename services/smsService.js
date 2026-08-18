@@ -19,20 +19,32 @@ const buildOtpMessage = (otp) =>
 const sendOtpSms = async (mobileNumber) => {
     const otp = generateOTP();
     try {
+        const missing = [
+            !process.env.SHREESMS_API_KEY && "SHREESMS_API_KEY",
+            !process.env.SHREESMS_SENDER_ID && "SHREESMS_SENDER_ID",
+            !process.env.SHREESMS_ENTITY_ID && "SHREESMS_ENTITY_ID",
+            !process.env.SHREESMS_TEMPLATE_ID && "SHREESMS_TEMPLATE_ID",
+        ].filter(Boolean);
+        if (missing.length > 0) {
+            const error = `Cannot send SMS via ShreeSMS: missing env var(s) ${missing.join(", ")}`;
+            console.error(error);
+            return { success: false, otp: null, error };
+        }
+
         const mobile = mobileNumber.replace(/\D/g, "").slice(-10);
 
         const url = `${SHREESMS_URL}` +
         `?APIkey=${process.env.SHREESMS_API_KEY}` +
         `&SenderID=${process.env.SHREESMS_SENDER_ID}` +
         `&SMSType=OTP_Transaction` + // Service Implicit
-        `&Mobile=${mobile}` +
-        `&MsgText=${buildOtpMessage(otp)}` +
+        `&Mobile=+91${mobile}` +
+        `&MsgText=${encodeURIComponent(buildOtpMessage(otp))}` +
         `&EntityID=${process.env.SHREESMS_ENTITY_ID}` +
         `&TemplateID=${process.env.SHREESMS_TEMPLATE_ID}`;
 
         const response = await axios.get(url);
-        console.log("response", response);
-        
+        console.log("ShreeSMS response:", response.data);
+
         if (response.data.startsWith("ok|")) {
             const addOtpVerificationResult = await addOtpVerification(mobileNumber, otp);
             if (!addOtpVerificationResult) {
@@ -40,10 +52,8 @@ const sendOtpSms = async (mobileNumber) => {
             }
             return { success: true, otp, response: response.data };
         } else {
-            return { success: false, otp: null, error: response };
+            return { success: false, otp: null, error: response.data };
         }
-
-        return response.data;
     } catch (error) {
         console.error(
             "ShreeSMS OTP send error:",
