@@ -34,7 +34,7 @@ async function sendOtpSms(mobileNumber) {
 
     try {
         const response = await axios.get(url);
-        console.log("ShreeSMS Response:", response.data);
+        // console.log("ShreeSMS Response:", response.data);
 
         if (response.data.startsWith("ok|")) {
             const addOtpVerificationResult = await addOtpVerification(mobileNumber, otp);
