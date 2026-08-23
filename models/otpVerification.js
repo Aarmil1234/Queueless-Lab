@@ -33,6 +33,6 @@ const otpVerificationSchema = new Schema({
     timestamps: true,
 });
 
-const OtpVerification = mongoose.model('OtpVerification', otpVerificationSchema);
+const OtpVerification = mongoose.model('otpverifications', otpVerificationSchema);
 
 module.exports = OtpVerification;

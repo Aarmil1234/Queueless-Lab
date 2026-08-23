@@ -1,13 +1,8 @@
 const axios = require("axios");
 const OtpVerification = require("../models/otpVerification");
-require("dotenv").config();
 
 const SHREESMS_URL = "https://web.shreesms.net/API/SendSMS.aspx";
-const SHREESMS_API_KEY = process.env.SHREESMS_API_KEY;
-const SHREESMS_SENDER_ID = process.env.SHREESMS_SENDER_ID;  // QUEUELES
-const SHREESMS_ENTITY_ID = process.env.SHREESMS_ENTITY_ID;  // 1701175817292947842
-const SHREESMS_TEMPLATE_ID = process.env.SHREESMS_TEMPLATE_ID; // 1707175860554916635
-const otpExpiryMinutes = process.env.OTP_EXPIRY_MINUTES || 10;
+const otpExpiryMinutes = 10;
 
 // Generate a random numeric OTP
 function generateOTP(length = 6) {
@@ -18,23 +13,37 @@ function generateOTP(length = 6) {
     return otp;
 }
 
-async function sendOtpSms(mobileNumber) {
+const buildOtpMessage = (otp) =>
+    `Your OTP for password reset is ${otp}. Valid for 10 minutes. - QUELES`;
+
+const sendOtpSms = async (mobileNumber) => {
     const otp = generateOTP();
-
-    // 🚨 MUST match template exactly with {#var#} replaced
-    const message = `Your password reset OTP is ${otp}. This will be valid only for 10 min. Please do not share with anyone, If you don't request for this contact Queueless team.`;
-    const url = `${SHREESMS_URL}` +
-        `?APIkey=${SHREESMS_API_KEY}` +
-        `&SenderID=${SHREESMS_SENDER_ID}` +
-        `&SMSType=OTP_Transaction` + // Service Implicit
-        `&Mobile=${mobileNumber}` +
-        `&MsgText=${encodeURIComponent(message)}` +
-        `&EntityID=${SHREESMS_ENTITY_ID}` +
-        `&TemplateID=${SHREESMS_TEMPLATE_ID}`;
-
     try {
+        const missing = [
+            !process.env.SHREESMS_API_KEY && "SHREESMS_API_KEY",
+            !process.env.SHREESMS_SENDER_ID && "SHREESMS_SENDER_ID",
+            !process.env.SHREESMS_ENTITY_ID && "SHREESMS_ENTITY_ID",
+            !process.env.SHREESMS_TEMPLATE_ID && "SHREESMS_TEMPLATE_ID",
+        ].filter(Boolean);
+        if (missing.length > 0) {
+            const error = `Cannot send SMS via ShreeSMS: missing env var(s) ${missing.join(", ")}`;
+            console.error(error);
+            return { success: false, otp: null, error };
+        }
+
+        const mobile = mobileNumber.replace(/\D/g, "").slice(-10);
+
+        const url = `${SHREESMS_URL}` +
+        `?APIkey=${process.env.SHREESMS_API_KEY}` +
+        `&SenderID=${process.env.SHREESMS_SENDER_ID}` +
+        `&SMSType=OTPTransaction` + // Service Implicit
+        `&Mobile=${mobile}` +
+        `&MsgText=${encodeURIComponent(buildOtpMessage(otp))}` +
+        `&EntityID=${process.env.SHREESMS_ENTITY_ID}` +
+        `&TemplateID=${process.env.SHREESMS_TEMPLATE_ID}`;
+
         const response = await axios.get(url);
-        console.log("ShreeSMS Response:", response.data);
+        console.log("ShreeSMS response:", response.data);
 
         if (response.data.startsWith("ok|")) {
             const addOtpVerificationResult = await addOtpVerification(mobileNumber, otp);
@@ -43,13 +52,16 @@ async function sendOtpSms(mobileNumber) {
             }
             return { success: true, otp, response: response.data };
         } else {
-            return { success: false, otp: null, error: response };
+            return { success: false, otp: null, error: response.data };
         }
     } catch (error) {
-        console.error("Error:", error.message);
-        return { success: false, otp: null, error: error.message };
+        console.error(
+            "ShreeSMS OTP send error:",
+            error.response?.data || error.message
+        );
+        throw error;
     }
-}
+};
 
 async function addOtpVerification(mobileNumber, otp) {
     try {
@@ -58,7 +70,7 @@ async function addOtpVerification(mobileNumber, otp) {
             {
                 $set: {
                     otp,
-                    expiresAt: Date.now() + (otpExpiryMinutes * 60 * 1000), // 10 minutes
+                    expiresAt: Date.now() + (otpExpiryMinutes * 60 * 1000),
                     isVerified: false,
                     attempts: 0,
                     updatedAt: Date.now()
@@ -78,8 +90,8 @@ async function verifyOtpDB(mobileNumber, otp) {
         const otpVerification = await OtpVerification.findOne({ mobileNumber });
         if (!otpVerification) {
             return {
-                status : false,
-                message : "Generate OTP first"
+                status: false,
+                message: "Generate OTP first"
             };
         }
         if (otpVerification.otp !== otp) {
@@ -88,39 +100,34 @@ async function verifyOtpDB(mobileNumber, otp) {
             if (otpVerification.attempts >= 3) {
                 await OtpVerification.deleteOne({ mobileNumber });
                 return {
-                    status : false,
-                    message : "Too many attempts"
+                    status: false,
+                    message: "Too many attempts"
                 };
             }
             return {
-                status : false,
-                message : "Invalid OTP"
+                status: false,
+                message: "Invalid OTP"
             };
         }
         if (otpVerification.expiresAt < Date.now()) {
-            // delete otpVerification
             await OtpVerification.deleteOne({ mobileNumber });
             return {
-                status : false,
-                message : "OTP has expired"
+                status: false,
+                message: "OTP has expired"
             };
         }
+        await OtpVerification.deleteOne({ mobileNumber });
         return {
-            status : true,
-            message : "OTP verified successfully"
+            status: true,
+            message: "OTP verified successfully"
         };
     } catch (error) {
         console.error("Error:", error.message);
         return {
-            status : false,
-            message : "Failed to verify OTP"
+            status: false,
+            message: "Failed to verify OTP"
         };
     }
 }
 
-module.exports = {
-    generateOTP,
-    sendOtpSms,
-    addOtpVerification,
-    verifyOtpDB
-};
+module.exports = { sendOtpSms, addOtpVerification, verifyOtpDB };

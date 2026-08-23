@@ -1,16 +1,9 @@
 const { sendResponse } = require("../../utils/sendResponse");
 const LaboratoryOwner = require("../../models/laboratoryOwner");
-const { sendOtpSms } = require("../../services/smsService");
+const { sendOtpSms, verifyOtpDB } = require("../../services/smsService");
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
-const crypto = require('crypto');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-const OTP_EXPIRY_MINUTES = 10;
-
-function generateOtp() {
-    return crypto.randomInt(100000, 1000000).toString();
-}
 
 async function login(req, res) {
     try {
@@ -46,7 +39,7 @@ async function login(req, res) {
         const token = jwt.sign(
             { id: owner._id, email: owner.email, labId: owner._id },
             JWT_SECRET,
-            { expiresIn: '24h' }
+            // { expiresIn: '24h' }
         );
 
         // Save token for middleware validation and lab-specific access
@@ -167,11 +160,6 @@ async function forgetPassword(req, res) {
             });
         }
 
-        const otp = generateOtp();
-        owner.resetOtp = await bcrypt.hash(otp, 10);
-        owner.resetOtpExpiry = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
-        await owner.save({ validateBeforeSave: false });
-
         await sendOtpSms(owner.labMobileNumber);
 
         return sendResponse(req, res, 200, {
@@ -200,32 +188,23 @@ async function resetPassword(req, res) {
             });
         }
 
-        const owner = await LaboratoryOwner.findOne({ labMobileNumber, isActive: true }).select('+resetOtp +resetOtpExpiry');
-        if (!owner || !owner.resetOtp || !owner.resetOtpExpiry) {
+        const owner = await LaboratoryOwner.findOne({ labMobileNumber, isActive: true });
+        if (!owner) {
             return sendResponse(req, res, 400, {
                 success: false,
-                message: 'No OTP request found. Please request a new OTP'
+                message: 'No account found with this mobile number'
             });
         }
 
-        if (owner.resetOtpExpiry < new Date()) {
+        const otpResult = await verifyOtpDB(labMobileNumber, otp);
+        if (!otpResult.status) {
             return sendResponse(req, res, 400, {
                 success: false,
-                message: 'OTP has expired. Please request a new OTP'
-            });
-        }
-
-        const isOtpValid = await bcrypt.compare(otp, owner.resetOtp);
-        if (!isOtpValid) {
-            return sendResponse(req, res, 400, {
-                success: false,
-                message: 'Invalid OTP'
+                message: otpResult.message
             });
         }
 
         owner.password = newPassword;
-        owner.resetOtp = undefined;
-        owner.resetOtpExpiry = undefined;
         await owner.save();
 
         return sendResponse(req, res, 200, {
