@@ -67,7 +67,7 @@ const addPatientReportDb = async (data) => {
                     };
                 }
 
-                const testToUpdate = report.testReport.find(test => test._id.toString() === incomingTestId.toString());
+                const testToUpdate = report.testReport.find(test => test.testReportId && test.testReportId.toString() === incomingTestId.toString());
 
                 if (!testToUpdate) {
                     return {
@@ -77,8 +77,9 @@ const addPatientReportDb = async (data) => {
                 }
 
                 if (incomingTest?.testResult && typeof incomingTest.testResult === 'object') {
-                    const resultMap = new Map(Object.entries(incomingTest.testResult));
-                    testToUpdate.testResult = resultMap;
+                    for (const [key, value] of Object.entries(incomingTest.testResult)) {
+                        testToUpdate.testResult.set(key, value);
+                    }
                 }
 
                 if (Array.isArray(incomingTest?.testParameters)) {
@@ -124,7 +125,7 @@ const addPatientReportDb = async (data) => {
             };
         }
 
-        const testToUpdate = report.testReport.find(test => test._id.toString() === testId);
+        const testToUpdate = report.testReport.find(test => test.testReportId && test.testReportId.toString() === testId.toString());
 
         if (!testToUpdate) {
             return {
@@ -134,8 +135,9 @@ const addPatientReportDb = async (data) => {
         }
 
         if (testResult) {
-            const resultMap = new Map(Object.entries(testResult));
-            testToUpdate.testResult = resultMap;
+            for (const [key, value] of Object.entries(testResult)) {
+                testToUpdate.testResult.set(key, value);
+            }
         }
 
         if (testParameters && Array.isArray(testParameters)) {
