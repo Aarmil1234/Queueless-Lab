@@ -2,6 +2,7 @@ const { sendResponse } = require("../../utils/sendResponse");
 const mongoose = require('mongoose');
 const { addPatientReportDb, getAllPatientReportDB, getReportByIdDB, getTestsListForReportDb, createNewReportDb, saveReportPdfMetadataDb } = require("../../db/report/report");
 const { validateParameterRanges, updateParameterStatus } = require("../../utils/parameterRangeValidator");
+const { resolveParameterRanges } = require("../../utils/parameterRangeResolver");
 const Report = require("../../models/reports");
 const PatientModal = require("../../models/patient");
 const path = require("path");
@@ -271,6 +272,31 @@ const addPatientReport = async (req, res) => {
             throw new Error("Patient not found");
         }
 
+        // Resolve the reference range for every parameter against this patient's
+        // age/gender so the generated PDF's REF VALUE column is populated.
+        const testReportForPDF = await Promise.all((savedReport.testReport || []).map(async test => {
+            const resolvedRanges = await resolveParameterRanges(test.testParameters || [], patient);
+            const rangeByParamId = new Map(
+                resolvedRanges.map(r => [r.parameterId, r])
+            );
+
+            return {
+                testName: test.testName || "Lab Test",
+                testResult: test.testResult || null,
+                testParameters: (test.testParameters || []).map(p => {
+                    const resolved = rangeByParamId.get(p.parameterId ? p.parameterId.toString() : "");
+                    return {
+                        parameterName: resolved?.parameterName || p.parameterName || p.parameter || "",
+                        value: p.value ?? "",
+                        unit: p.unit || "",
+                        isCritical: p.isCritical ?? (p.status === "CRITICAL"),
+                        referenceRange: resolved?.referenceRange?.text || p.referenceRange || p.referenceRangeText || null,
+                        remarks: p.notes || p.remarks || ""
+                    };
+                })
+            };
+        }));
+
         // Construct structural map for multi-test report generation
         const reportForPDF = {
             labId,
@@ -280,18 +306,7 @@ const addPatientReport = async (req, res) => {
             age: patient.age !== undefined && patient.age !== null ? `${patient.age} ${patient.ageType || ""}`.trim() : "",
             reportId: savedReport._id?.toString() || "",
             reportDate: savedReport.createdAt || new Date(),
-            testReport: (savedReport.testReport || []).map(test => ({
-                testName: test.testName || "Lab Test",
-                testResult: test.testResult || null,
-                testParameters: (test.testParameters || []).map(p => ({
-                    parameterName: p.parameterName || p.parameter || "",
-                    value: p.value ?? "",
-                    unit: p.unit || "",
-                    isCritical: p.isCritical ?? false,
-                    referenceRange: p.referenceRange || p.referenceRangeText || null,
-                    remarks: p.remarks || ""
-                }))
-            }))
+            testReport: testReportForPDF
         };
 
         // Render the raw PDF data pipeline across the newly structured object

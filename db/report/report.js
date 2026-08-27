@@ -5,6 +5,7 @@ const Patient = require("../../models/patient");
 const Parameter = require("../../models/parameter");
 const ParameterSubCategory = require("../../models/parameterSubCategoryModel");
 const TestReport = require("../../models/testReport");
+const { resolveParameterRanges } = require("../../utils/parameterRangeResolver");
 
 const addPatientReportDb = async (data) => {
     try {
@@ -421,9 +422,9 @@ async function getTestsListForReportDb(patientId, status, labId) {
         let allTests = [];
 
         // Process each report
-        reports.forEach(report => {
+        for (const report of reports) {
             let filteredTests = report.testReport;
-            
+
             if (status === 'pending') {
                 filteredTests = report.testReport.filter(test => test.isReportSubmitted === false);
             } else if (status === 'submitted') {
@@ -431,16 +432,18 @@ async function getTestsListForReportDb(patientId, status, labId) {
             }
 
             // Add tests from this report with reportId and report date
-            const testsFromThisReport = filteredTests.map(test => ({
+            const testsFromThisReport = await Promise.all(filteredTests.map(async test => ({
                 id: test._id ? test._id.toString() : null,
                 name: test.testName,
                 reportId: report._id.toString(),
                 pdfUrl: report.pdfUrl || null,
-                reportDate: report.createdAt
-            }));
+                reportDate: report.createdAt,
+                // Reference range per parameter, resolved for this patient's age/gender
+                testParameters: await resolveParameterRanges(test.testParameters, patient)
+            })));
 
             allTests = allTests.concat(testsFromThisReport);
-        });
+        }
 
         // Return the result with patient details in parent object
         const result = {

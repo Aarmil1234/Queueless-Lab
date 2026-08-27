@@ -4,6 +4,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const Patient = require("../../models/patient");
 const Report = require("../../models/reports");
+const { resolveParameterRanges } = require("../../utils/parameterRangeResolver");
 
 const addPatientDb = async (data) => {
     try {
@@ -133,7 +134,10 @@ const getPatientsWithSubmittedReportsDb = async (labId) => {
                     patientReportMap[report.patientId].submittedTests.push({
                         reportId: report.id,
                         testReportId: test.testReportId,
-                        testName: test.testName
+                        testName: test.testName,
+                        // Raw params kept only to resolve reference ranges once the
+                        // patient (age/gender) is known below; stripped before returning.
+                        _rawParameters: test.testParameters || []
                     });
                 });
         });
@@ -145,10 +149,20 @@ const getPatientsWithSubmittedReportsDb = async (labId) => {
         });
 
         // Add reportIds and submitted test names to each patient
-        const patientsWithReportIds = patients.map(patient => ({
-            ...patient.toObject(),
-            reportIds: patientReportMap[patient._id]?.reportIds || [],
-            submittedTests: patientReportMap[patient._id]?.submittedTests || []
+        const patientsWithReportIds = await Promise.all(patients.map(async patient => {
+            const mapEntry = patientReportMap[patient._id] || { reportIds: [], submittedTests: [] };
+
+            const submittedTests = await Promise.all(mapEntry.submittedTests.map(async ({ _rawParameters, ...rest }) => ({
+                ...rest,
+                // Reference range per parameter, resolved for this patient's age/gender
+                testParameters: await resolveParameterRanges(_rawParameters, patient)
+            })));
+
+            return {
+                ...patient.toObject(),
+                reportIds: mapEntry.reportIds,
+                submittedTests
+            };
         }));
 
         return patientsWithReportIds;
