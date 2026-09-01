@@ -81,6 +81,7 @@ const sendWhatsAppMessages = async (type, numbers, data) => {
                             template_id: 394626,
                             phone_number: doctorContactNo,
                             "templateVariable-name-1": data.patientName,
+                            "templateVariable-name-2": data.labName || "Queueless",
                             template_header_media_url: data.pdfUrl
                             }
                         }
@@ -96,6 +97,7 @@ const sendWhatsAppMessages = async (type, numbers, data) => {
                             phone_number: phone,
                             "templateVariable-name-1": data.doctorName,
                             "templateVariable-name-2": data.patientName,
+                            "templateVariable-name-3": data.labName || "Queueless",
                             template_header_media_url: data.pdfUrl
                             }
                         }

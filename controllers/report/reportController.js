@@ -177,6 +177,7 @@ const addPatientReportOld = async (req, res) => {
                     patientName: patient.name || patient.patientName || "",
                     doctorContactNo: patient.doctorContactNo || "",
                     doctorName : patient.referredByDoctor || "",
+                    labName: req.owner?.labName || req.labName || "Queueless",
                     pdfUrl: pdfUrl
                 }
             );
@@ -374,6 +375,7 @@ const addPatientReport = async (req, res) => {
                     patientName: patient.name || patient.patientName || "",
                     doctorContactNo: patient.doctorContactNo || "",
                     doctorName: patient.referredByDoctor || "",
+                    labName: req.owner?.labName || req.labName || "Queueless",
                     pdfUrl: pdfUrl
                 }
             );

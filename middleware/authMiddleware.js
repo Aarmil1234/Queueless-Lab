@@ -27,6 +27,7 @@ const authMiddleware = async (req, res, next) => {
 
         req.headers.labId = owner._id;
         req.labId = owner._id;
+        req.labName = owner.labName;
         req.owner = owner;
 
         next();

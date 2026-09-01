@@ -270,3 +270,10 @@ npm run dev
 * Test definitions are managed via Test Master
 * Reports are stored dynamically using key-value structure
 * Designed for scalable lab & hospital systems
+
+
+## Changes 
+
+- Remove code from every master except test
+- Ask unit for subparameter instead of parameter
+- Resolve the data is arriving as n/a in generated pdf 

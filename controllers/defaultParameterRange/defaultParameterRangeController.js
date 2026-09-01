@@ -48,8 +48,8 @@ const sanitizeDefaultParameterRange = (payload = {}) => {
     if (sanitized.minValue > sanitized.maxValue) {
         throw new Error('maxValue must be greater than minValue');
     }
-    if (!['MALE', 'FEMALE', 'BOTH'].includes(sanitized.gender)) {
-        throw new Error('gender must be one of: MALE, FEMALE, BOTH');
+    if (!['MALE', 'FEMALE', 'ANY'].includes(sanitized.gender)) {
+        throw new Error('gender must be one of: MALE, FEMALE, ANY');
     }
     return sanitized;
 };

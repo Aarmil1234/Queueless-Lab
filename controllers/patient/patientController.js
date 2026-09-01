@@ -44,7 +44,7 @@ const addPatient = async (req, res) => {
                 await sendPatientRegistrationMessage(
                     createdPatient.mobileNumber,
                     patientName || createdPatient.patientName || "Patient",
-                    req.labName || "Queueless"
+                    req.labName || req.owner?.labName || "Queueless"
                 );
             } catch (whatsappError) {
                 console.error("Patient registration WhatsApp failed:", whatsappError.message);
