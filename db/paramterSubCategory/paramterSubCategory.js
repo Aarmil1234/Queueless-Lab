@@ -131,6 +131,13 @@ async function addParameterSubCategoryDb(data) {
         await parameterSubCategory.save();
         return Responses.success;
     } catch (error) {
+        console.error('addParameterSubCategoryDb error:', error);
+        if (error.code === 11000) {
+            return {
+                ...Responses.alreadyExist,
+                clientMessage: { Message: 'A parameter subcategory with this name already exists for the specified parameter' }
+            };
+        }
         return Responses.tryAgain;
     }
 }
