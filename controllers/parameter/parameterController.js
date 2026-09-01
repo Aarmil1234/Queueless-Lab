@@ -11,7 +11,6 @@ const {
 const sanitizeParameterPayload = (payload = {}) => ({
     ...(payload.testReportId && { testReportId: payload.testReportId }),
     ...(payload.name && { name: payload.name.trim() }),
-    ...(payload.category && { category: payload.category.trim() }),
     ...(payload.type && { type: payload.type.toUpperCase() }),
     ...(payload.isActive !== undefined && { isActive: payload.isActive })
 });

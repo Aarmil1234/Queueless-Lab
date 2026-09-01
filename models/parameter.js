@@ -19,10 +19,6 @@ const parameterSchema = new mongoose.Schema({
         required: true,
         trim: true
     },
-    category: {
-        type: String,
-        trim: true
-    },
     type: {
         type: String,
         enum: ['NUMERIC', 'POS_NEG', 'TEXT'],
@@ -43,7 +39,6 @@ const parameterSchema = new mongoose.Schema({
     }
 });
 
-parameterSchema.index({ category: 1 });
 parameterSchema.index({ isActive: 1 });
 
 // Validate parent TestReport exists and is active before saving a Parameter under it
@@ -69,7 +64,6 @@ module.exports = Parameter;
 // {
 //   "testReportId": "5f8d0d55b54764421b6b0b1a",
 //   "name": "Hemoglobin",
-//   "category": "CBC",
 //   "type": "NUMERIC",
 //   "isActive": true
 // }

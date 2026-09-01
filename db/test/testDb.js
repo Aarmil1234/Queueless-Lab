@@ -54,7 +54,7 @@ const getAllTestsDb = async (labId) => {
             delete: false,
             isActive: true
         })
-        .populate('parameters', 'name category type')
+        .populate('parameters', 'name type')
         .lean();
 
         return {
@@ -78,7 +78,7 @@ const getTestByIdDb = async (testId, labId) => {
             delete: false,
             isActive: true
         })
-        .populate('parameters', 'name category type')
+        .populate('parameters', 'name type')
         .lean();
 
         if (!test) {
@@ -112,7 +112,7 @@ const getTestParametersWithSubCategoriesDb = async (testId, labId) => {
         .populate({
             path: 'parameters',
             match: { labId, delete: false, isActive: true },
-            select: 'name category type'
+            select: 'name type'
         })
         .lean();
 

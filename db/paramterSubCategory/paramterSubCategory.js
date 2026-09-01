@@ -6,7 +6,7 @@ const { Responses } = require('../../utils/responses');
 async function getAllParameterSubCategoriesDb(labId) {
     try {
         const subCategories = await ParameterSubCategory.find({ labId, delete: false })
-            .populate('parameterId', 'name category')
+            .populate('parameterId', 'name')
             .sort({ createdAt: -1 });
         return subCategories;
     } catch (error) {
@@ -21,7 +21,7 @@ async function getParameterSubCategoriesByParameterIdDb(parameterId, labId) {
             labId,
             delete: false 
         })
-        .populate('parameterId', 'name category')
+        .populate('parameterId', 'name')
         .sort({ createdAt: -1 });
 
         if (!subCategories || subCategories.length === 0) return [];
@@ -90,7 +90,7 @@ async function getParameterSubCategoriesByParameterIdDb(parameterId, labId) {
 async function getSingleParameterSubCategoryByIdDb(id, labId) {
     try {
         const subCategory = await ParameterSubCategory.findOne({ _id: id, labId })
-            .populate('parameterId', 'name category');
+            .populate('parameterId', 'name');
         return [subCategory];
     } catch (error) {
         return [];
