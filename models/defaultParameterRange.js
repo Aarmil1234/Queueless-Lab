@@ -24,7 +24,7 @@ const defaultParameterRangeSchema = new mongoose.Schema({
 
     gender: {
         type: String,
-        enum: ['MALE', 'FEMALE', 'BOTH'],
+        enum: ['MALE', 'FEMALE', 'ANY'],
         required: true
     },
 
