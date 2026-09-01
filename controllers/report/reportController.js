@@ -354,10 +354,19 @@ const addPatientReport = async (req, res) => {
             mobileNumber: patient.mobileNumber || "",
             gender: patient.gender || "",
             age: patient.age !== undefined && patient.age !== null ? `${patient.age} ${patient.ageType || ""}`.trim() : "",
+            address: patient.address || "",
+            regNumber: patient.caseId || savedReport._id?.toString() || "",
+            regDateTime: patient.createdAt || savedReport.createdAt || null,
+            referredBy: patient.referredByDoctor || "",
+            referredByContact: patient.doctorContactNo || "",
             reportId: savedReport._id?.toString() || "",
             reportDate: savedReport.createdAt || new Date(),
             testReport: testReportForPDF
         };
+
+        // Temporary: inspect exactly what feeds the PDF so blank RESULTS/UNITS/
+        // REF VALUE columns can be traced back to the submitted payload.
+        console.log("reportForPDF:", JSON.stringify(reportForPDF, null, 2));
 
         // Render the raw PDF data pipeline across the newly structured object
         const pdf = await generatePatientReportPDF(reportForPDF);

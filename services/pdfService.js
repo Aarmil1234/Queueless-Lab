@@ -191,7 +191,7 @@ const generatePatientReportPDF = async (report) => {
                 ["Reg. Number", report.regNumber],
                 ["Reg. Date & Time", formatDateTime(report.regDateTime)],
                 ["Report Date & Time", formatDateTime(report.reportDate)],
-                ["Referred By", report.referredBy ? `Dr. ${report.referredBy}` : "N/A"],
+                ["Referred By", report.referredBy ? (/^dr\.?\s/i.test(String(report.referredBy)) ? String(report.referredBy) : `Dr. ${report.referredBy}`) : "N/A"],
                 ["Ref. Doctor Contact", report.referredByContact]
             ];
 
@@ -351,10 +351,26 @@ const generatePatientReportPDF = async (report) => {
             }
 
             const resultObj = normalizeResultObject(test.testResult);
+
+            // referenceRange may arrive as a string ("13 - 17"), or as an object
+            // with any of {min,max} / {minValue,maxValue} / {from,to}. Only emit a
+            // row when we actually have something — never "N/A - N/A".
+            const formatRange = (rr) => {
+                if (!rr) return "";
+                if (typeof rr === "string") return rr.trim();
+                if (typeof rr === "object") {
+                    const min = rr.min ?? rr.minValue ?? rr.from;
+                    const max = rr.max ?? rr.maxValue ?? rr.to;
+                    if (min === undefined && max === undefined) return "";
+                    return `${min ?? ""} - ${max ?? ""}`.trim();
+                }
+                return stringify(rr);
+            };
+
             return [
                 ['Unit', stringify(resultObj.unit || "")],
                 ['Critical', stringify(resultObj.isCritical !== undefined ? resultObj.isCritical : "")],
-                ['Reference Range', resultObj.referenceRange ? `${stringify(resultObj.referenceRange.min)} - ${stringify(resultObj.referenceRange.max)}` : ""],
+                ['Reference Range', formatRange(resultObj.referenceRange)],
                 ['Remarks', stringify(resultObj.remarks || "")],
                 ['Previous Values', Array.isArray(resultObj.previousValues) ? resultObj.previousValues.map(stringify).join(', ') : stringify(resultObj.previousValues || "")],
                 ['Collected At', resultObj.collectedAt ? moment(resultObj.collectedAt).format('DD-MM-YYYY') : ""],
