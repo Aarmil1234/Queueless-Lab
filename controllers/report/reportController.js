@@ -5,6 +5,7 @@ const { validateParameterRanges, updateParameterStatus } = require("../../utils/
 const { resolveParameterRanges } = require("../../utils/parameterRangeResolver");
 const Report = require("../../models/reports");
 const PatientModal = require("../../models/patient");
+const ParameterSubCategory = require("../../models/parameterSubCategoryModel");
 const path = require("path");
 
 const createNewReport = async (req, res) => {
@@ -275,75 +276,172 @@ const addPatientReport = async (req, res) => {
 
         // Resolve the reference range for every parameter against this patient's
         // age/gender so the generated PDF's REF VALUE column is populated.
+        const isFilled = (v) => v !== undefined && v !== null && v !== "";
+        // A stored value may be a bare scalar OR an object like
+        // { value: 13.5, unit: "g/dL", referenceRange: "13-17" }.
+        const pickScalar = (v) => (v && typeof v === "object" && !Array.isArray(v))
+            ? (v.value ?? v.result ?? v.resultValue ?? v.reading ?? "")
+            : v;
+        // "RBC Morphology_1" / "rbc morphology_1" / "RBC_MORPHOLOGY_1" all -> "rbc_morphology_1"
+        const normKey = (s) => String(s || "")
+            .trim().toLowerCase()
+            .replace(/[^a-z0-9]+/g, "_")
+            .replace(/^_+|_+$/g, "");
+        const rangeToText = (rr) => {
+            if (!rr) return null;
+            if (typeof rr === "string") return rr.trim() || null;
+            if (typeof rr === "object") {
+                const min = rr.min ?? rr.minValue ?? rr.from;
+                const max = rr.max ?? rr.maxValue ?? rr.to;
+                return (min !== undefined || max !== undefined) ? `${min ?? ""} - ${max ?? ""}`.trim() : null;
+            }
+            return String(rr);
+        };
+        const META_KEYS = new Set([
+            "unit", "units", "iscritical", "critical", "referencerange", "refvalue",
+            "range", "remarks", "note", "notes", "previousvalues", "collectedat",
+            "verifiedby", "status"
+        ]);
+
         const testReportForPDF = await Promise.all((savedReport.testReport || []).map(async test => {
             // Work with plain objects so every stored field is readable.
             const rawParams = (test.testParameters || []).map(p => (p && p.toObject ? p.toObject() : p));
 
-            const resolvedRanges = await resolveParameterRanges(rawParams, patient);
-            const rangeByParamId = new Map(
-                resolvedRanges.map(r => [r.parameterId, r])
-            );
-
-            // Legacy / free-form results were written to the testResult Map.
-            // Build a case-insensitive lookup so a structured row that has no
-            // value of its own can still fall back to what was entered there.
+            // testResult is the free-form Map the client posts results into
+            // (keyed by an arbitrary label, sub-parameter code/name, or id).
             const legacyResult = test.testResult instanceof Map
                 ? Object.fromEntries(test.testResult)
                 : (test.testResult && typeof test.testResult === "object" ? test.testResult : {});
-            const legacyByKey = new Map(
-                Object.entries(legacyResult).map(([k, v]) => [String(k).trim().toLowerCase(), v])
-            );
+            const rawById = new Map();            // exact id/label -> value
+            const valueByNormKey = new Map();     // normalised label -> value
+            const measurementEntries = [];        // [normKey, value] for non-metadata keys
+            for (const [k, v] of Object.entries(legacyResult)) {
+                const lk = String(k).trim().toLowerCase();
+                rawById.set(lk, v);
+                if (META_KEYS.has(lk) || !isFilled(pickScalar(v))) continue;
+                valueByNormKey.set(normKey(k), v);
+                measurementEntries.push([normKey(k), v]);
+            }
             const legacyUnit = legacyResult.unit ?? legacyResult.units ?? "";
-            const legacyRangeText = (() => {
-                const rr = legacyResult.referenceRange ?? legacyResult.refValue ?? legacyResult.range;
-                if (!rr) return "";
-                if (typeof rr === "object") {
-                    const min = rr.min ?? rr.minValue ?? rr.from;
-                    const max = rr.max ?? rr.maxValue ?? rr.to;
-                    return (min !== undefined || max !== undefined) ? `${min ?? ""} - ${max ?? ""}`.trim() : "";
-                }
-                return String(rr);
-            })();
+            const legacyRangeText = rangeToText(legacyResult.referenceRange ?? legacyResult.refValue ?? legacyResult.range);
 
-            const isFilled = (v) => v !== undefined && v !== null && v !== "";
+            // Pull the sub-parameters for every parameter in this test so a
+            // free-form result key can be matched to a specific sub-parameter.
+            const paramIds = rawParams.map(p => p.parameterId).filter(Boolean);
+            const subCats = paramIds.length
+                ? await ParameterSubCategory.find({ parameterId: { $in: paramIds }, delete: false, isActive: true })
+                    .select("_id parameterId name code unit").lean()
+                : [];
+            const subsByParam = new Map();
+            for (const sc of subCats) {
+                const key = sc.parameterId.toString();
+                if (!subsByParam.has(key)) subsByParam.set(key, []);
+                subsByParam.get(key).push(sc);
+            }
+
+            // Resolve ranges for the parameter rows AND for every parameter+subCategory pair.
+            const rangeLookupInput = [
+                ...rawParams,
+                ...subCats.map(sc => ({ parameterId: sc.parameterId, subCategoryId: sc._id }))
+            ];
+            const resolvedRanges = await resolveParameterRanges(rangeLookupInput, patient);
+            const rangeByParamId = new Map();
+            const rangeByPair = new Map();
+            for (const r of resolvedRanges) {
+                if (r.subCategoryId) rangeByPair.set(`${r.parameterId}:${r.subCategoryId}`, r);
+                else rangeByParamId.set(r.parameterId, r);
+            }
+
+            const findValueForSub = (sc) => {
+                const candidates = [
+                    rawById.get(sc._id.toString().toLowerCase()),
+                    valueByNormKey.get(normKey(sc.code)),
+                    valueByNormKey.get(normKey(sc.name))
+                ];
+                for (const c of candidates) if (isFilled(pickScalar(c))) return c;
+                return undefined;
+            };
+
+            const outParams = [];
+            rawParams.forEach(p => {
+                const pid = p.parameterId ? p.parameterId.toString() : "";
+                const resolvedParam = rangeByParamId.get(pid);
+                const parameterName = resolvedParam?.parameterName || p.parameterName || p.parameter || `Parameter`;
+                const subs = subsByParam.get(pid) || [];
+
+                if (subs.length > 0) {
+                    // One indented child row per sub-parameter that has a value.
+                    const children = [];
+                    subs.forEach(sc => {
+                        let raw = findValueForSub(sc);
+                        // structured submission: p carried this subCategoryId + value
+                        if (!isFilled(pickScalar(raw)) && p.subCategoryId && p.subCategoryId.toString() === sc._id.toString()) {
+                            raw = p.value;
+                        }
+                        if (!isFilled(pickScalar(raw))) return;
+                        const obj = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : null;
+                        const pairRange = rangeByPair.get(`${pid}:${sc._id.toString()}`);
+                        children.push({
+                            parameterName: sc.name || "",
+                            value: pickScalar(raw),
+                            unit: (obj && (obj.unit ?? obj.units)) || sc.unit || legacyUnit || "",
+                            isCritical: Boolean(legacyResult.isCritical),
+                            referenceRange: pairRange?.referenceRange?.text
+                                || rangeToText(obj && (obj.referenceRange ?? obj.refValue ?? obj.range))
+                                || legacyRangeText
+                                || null
+                        });
+                    });
+
+                    // Nothing matched by key but there's exactly one sub and one
+                    // free-form value -> assign it to that sub.
+                    if (children.length === 0 && subs.length === 1 && measurementEntries.length === 1) {
+                        const sc = subs[0];
+                        const pairRange = rangeByPair.get(`${pid}:${sc._id.toString()}`);
+                        children.push({
+                            parameterName: sc.name || "",
+                            value: pickScalar(measurementEntries[0][1]),
+                            unit: sc.unit || legacyUnit || "",
+                            isCritical: Boolean(legacyResult.isCritical),
+                            referenceRange: pairRange?.referenceRange?.text || legacyRangeText || null
+                        });
+                    }
+
+                    if (children.length > 0) {
+                        outParams.push({ parameterName, subParameters: children });
+                        return;
+                    }
+                }
+
+                // No sub-parameters (or none matched): a single flat row.
+                let value = isFilled(pickScalar(p.value)) ? pickScalar(p.value) : "";
+                if (!isFilled(value)) {
+                    const flat = [
+                        rawById.get(pid.toLowerCase()),
+                        valueByNormKey.get(normKey(parameterName)),
+                        rawById.get("value"),
+                        rawById.get("result"),
+                        (rawParams.length === 1 && measurementEntries.length === 1) ? measurementEntries[0][1] : undefined
+                    ];
+                    for (const c of flat) if (isFilled(pickScalar(c))) { value = pickScalar(c); break; }
+                }
+                outParams.push({
+                    parameterName,
+                    value: value ?? "",
+                    unit: p.unit || resolvedParam?.unit || legacyUnit || "",
+                    isCritical: p.isCritical ?? (p.status === "CRITICAL") ?? Boolean(legacyResult.isCritical),
+                    referenceRange: resolvedParam?.referenceRange?.text
+                        || rangeToText(p.referenceRange || p.referenceRangeText)
+                        || legacyRangeText
+                        || null,
+                    remarks: p.notes || p.remarks || ""
+                });
+            });
 
             return {
                 testName: test.testName || "Lab Test",
                 testResult: test.testResult || null,
-                testParameters: rawParams.map(p => {
-                    const pid = p.parameterId ? p.parameterId.toString() : "";
-                    const resolved = rangeByParamId.get(pid);
-                    const parameterName = resolved?.parameterName || p.parameterName || p.parameter || "";
-                    const subName = resolved?.subCategoryName || p.subCategoryName || "";
-
-                    // value: structured row first, then the legacy map keyed by
-                    // sub-parameter name, then parameter name.
-                    const legacyValue = isFilled(subName) ? legacyByKey.get(subName.trim().toLowerCase()) : undefined;
-                    const legacyValueByParam = legacyByKey.get(String(parameterName).trim().toLowerCase());
-                    const value = isFilled(p.value) ? p.value
-                        : isFilled(legacyValue) ? legacyValue
-                        : isFilled(legacyValueByParam) ? legacyValueByParam
-                        : "";
-
-                    const unit = p.unit || resolved?.unit || legacyUnit || "";
-
-                    const referenceRange = resolved?.referenceRange?.text
-                        || p.referenceRange
-                        || p.referenceRangeText
-                        || legacyRangeText
-                        || null;
-
-                    return {
-                        parameterName: subName && subName !== parameterName
-                            ? `${parameterName} (${subName})`
-                            : parameterName,
-                        value: value ?? "",
-                        unit,
-                        isCritical: p.isCritical ?? (p.status === "CRITICAL"),
-                        referenceRange,
-                        remarks: p.notes || p.remarks || ""
-                    };
-                })
+                testParameters: outParams
             };
         }));
 
@@ -366,7 +464,16 @@ const addPatientReport = async (req, res) => {
 
         // Temporary: inspect exactly what feeds the PDF so blank RESULTS/UNITS/
         // REF VALUE columns can be traced back to the submitted payload.
+        console.log("=== PDF DEBUG ===");
+        console.log("req.body:", JSON.stringify(req.body, null, 2));
+        console.log("saved testReport:", JSON.stringify(
+            (savedReport.testReport || []).map(t => ({
+                testName: t.testName,
+                testResult: t.testResult instanceof Map ? Object.fromEntries(t.testResult) : t.testResult,
+                testParameters: (t.testParameters || []).map(p => (p.toObject ? p.toObject() : p))
+            })), null, 2));
         console.log("reportForPDF:", JSON.stringify(reportForPDF, null, 2));
+        console.log("=== /PDF DEBUG ===");
 
         // Render the raw PDF data pipeline across the newly structured object
         const pdf = await generatePatientReportPDF(reportForPDF);
