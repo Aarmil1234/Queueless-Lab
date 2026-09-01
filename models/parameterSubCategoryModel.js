@@ -13,15 +13,14 @@ const parameterSubCategorySchema = new mongoose.Schema({
         required: true,
         index: true
     },
-    code: {
-        type: String,
-        required: true,
-        trim: true,
-        uppercase: true
-    },
     name: {
         type: String,
         required: true,
+        trim: true
+    },
+    unit: {
+        type: String,
+        default: null,
         trim: true
     },
     isActive: {
@@ -41,18 +40,8 @@ const parameterSubCategorySchema = new mongoose.Schema({
 
 // Add indexes for faster lookups
 parameterSubCategorySchema.index({ parameterId: 1 });
-parameterSubCategorySchema.index({ code: 1 });
 parameterSubCategorySchema.index({ isActive: 1 });
 parameterSubCategorySchema.index({ delete: 1 });
-
-// Unique index on { parameterId, code }
-parameterSubCategorySchema.index(
-    { parameterId: 1, code: 1 },
-    { 
-        unique: true,
-        partialFilterExpression: { delete: false }
-    }
-);
 
 // Pre-save middleware to validate parameter exists and is active
 parameterSubCategorySchema.pre('save', async function() {

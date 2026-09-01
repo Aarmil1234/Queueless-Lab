@@ -35,10 +35,10 @@ async function getParameterByIdDb(id, labId) {
 
 async function addParameterDb(data) {
     try {
-        //check if parameter with same code already exists under the same test report
+        //check if parameter with same name already exists under the same test report
         const existingParameter = await Parameter.findOne({
             testReportId: data.testReportId,
-            code: { $regex: new RegExp(`^${data.code}$`, 'i') },
+            name: { $regex: new RegExp(`^${data.name}$`, 'i') },
             labId: data.labId,
             delete: false
         });
@@ -62,19 +62,19 @@ async function updateParameterDb(id, data, labId) {
         if (!existingParameter) {
             return Responses.notFound;
         }
-        // If code is being updated, check for duplicates within the same test report
-        if (data.code && data.code !== existingParameter.code) {
-            const codeExists = await Parameter.findOne({
+        // If name is being updated, check for duplicates within the same test report
+        if (data.name && data.name !== existingParameter.name) {
+            const nameExists = await Parameter.findOne({
                 testReportId: data.testReportId || existingParameter.testReportId,
-                code: data.code,
+                name: data.name,
                 labId,
                 _id: { $ne: id },
                 delete: { $ne: true }
             });
-            if (codeExists) {
+            if (nameExists) {
                 return {
                     ...Responses.alreadyExist,
-                    clientMessage: { Message: 'A parameter with this code already exists for the specified test report' }
+                    clientMessage: { Message: 'A parameter with this name already exists for the specified test report' }
                 };
             }
         }

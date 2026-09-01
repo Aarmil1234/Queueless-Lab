@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const DefaultParameterRange = require('../models/defaultParameterRange');
 const Parameter = require('../models/parameter');
+const ParameterSubCategory = require('../models/parameterSubCategoryModel');
 
 /**
  * Resolves the applicable reference range for each test parameter based on the
@@ -13,6 +14,7 @@ const Parameter = require('../models/parameter');
  * @param {Array} testParameters - [{ parameterId, subCategoryId, parameterName? }]
  * @param {Object} patient - { age, gender }
  * @returns {Promise<Array>} [{ parameterId, parameterName, subCategoryId,
+ *                              subCategoryName, unit,
  *                              referenceRange: { min, max, text } | null }]
  */
 async function resolveParameterRanges(testParameters = [], patient = {}) {
@@ -79,10 +81,30 @@ async function resolveParameterRanges(testParameters = [], patient = {}) {
             }
         }
 
+        // Unit now lives on the sub-parameter (ParameterSubCategory). Pull the
+        // sub-parameter name + unit so the PDF's UNITS column can be populated.
+        let subCategoryName = param.subCategoryName || null;
+        let unit = param.unit || null;
+        if (subCategoryId) {
+            try {
+                const subCategoryDoc = await ParameterSubCategory.findById(subCategoryId)
+                    .select('name unit')
+                    .lean();
+                if (subCategoryDoc) {
+                    subCategoryName = subCategoryName || subCategoryDoc.name || null;
+                    unit = unit || subCategoryDoc.unit || null;
+                }
+            } catch (error) {
+                // leave subCategoryName / unit as-is
+            }
+        }
+
         resolved.push({
             parameterId: parameterId.toString(),
             parameterName,
             subCategoryId: subCategoryId ? subCategoryId.toString() : null,
+            subCategoryName,
+            unit: unit || null,
             referenceRange
         });
     }

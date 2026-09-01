@@ -36,9 +36,20 @@ const addPatientReportDb = async (data) => {
                     continue;
                 }
 
+                // Unit now lives on the sub-parameter (ParameterSubCategory), not the parameter
+                let subCategoryUnit = "";
+                if (parameter.subCategoryId && mongoose.Types.ObjectId.isValid(parameter.subCategoryId)) {
+                    const existingSubCategory = await ParameterSubCategory.findOne({
+                        _id: parameter.subCategoryId,
+                        delete: false,
+                        isActive: true
+                    });
+                    subCategoryUnit = existingSubCategory?.unit || "";
+                }
+
                 normalized.push({
                     ...parameter,
-                    unit: parameter.unit || existingParameter.unit || ""
+                    unit: parameter.unit || subCategoryUnit || ""
                 });
             }
 
@@ -366,7 +377,7 @@ async function createNewReportDb(patientId, testReports, labId) {
                             subCategoryId: null,
                             value: null,
                             status: 'PENDING',
-                            unit: param.unit || "",
+                            unit: "", // unit is resolved from the sub-parameter when results are entered
                             notes: ''
                         }));
                     }

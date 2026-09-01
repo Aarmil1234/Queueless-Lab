@@ -6,7 +6,7 @@ const { Responses } = require('../../utils/responses');
 async function getAllParameterSubCategoriesDb(labId) {
     try {
         const subCategories = await ParameterSubCategory.find({ labId, delete: false })
-            .populate('parameterId', 'code name category')
+            .populate('parameterId', 'name category')
             .sort({ createdAt: -1 });
         return subCategories;
     } catch (error) {
@@ -21,7 +21,7 @@ async function getParameterSubCategoriesByParameterIdDb(parameterId, labId) {
             labId,
             delete: false 
         })
-        .populate('parameterId', 'code name category')
+        .populate('parameterId', 'name category')
         .sort({ createdAt: -1 });
 
         if (!subCategories || subCategories.length === 0) return [];
@@ -62,7 +62,7 @@ async function getParameterSubCategoriesByParameterIdDb(parameterId, labId) {
 //             labId,
 //             delete: false 
 //         })
-//         .populate('parameterId', 'code name category')
+//         .populate('parameterId', 'name category')
 //         .sort({ createdAt: -1 });
 //         if (!subCategories) return [];
 
@@ -90,7 +90,7 @@ async function getParameterSubCategoriesByParameterIdDb(parameterId, labId) {
 async function getSingleParameterSubCategoryByIdDb(id, labId) {
     try {
         const subCategory = await ParameterSubCategory.findOne({ _id: id, labId })
-            .populate('parameterId', 'code name category');
+            .populate('parameterId', 'name category');
         return [subCategory];
     } catch (error) {
         return [];
@@ -100,7 +100,7 @@ async function getSingleParameterSubCategoryByIdDb(id, labId) {
 // async function getSingleParameterSubCategoryByIdDb(id, labId) {
 //     try {
 //         const subCategory = await ParameterSubCategory.findOne({ _id: id, labId })
-//             .populate('parameterId', 'code name category');
+//             .populate('parameterId', 'name category');
 
 //         if (!subCategory) return [];
 
@@ -143,29 +143,20 @@ async function updateParameterSubCategoryDb(id, data, labId) {
             return Responses.notFound;
         }
         
-        // Check for duplicate code if code is being updated
-        if (data.code && data.code !== existingParameterSubCategory.code) {
-            console.log('Checking for duplicate:', {
-                newCode: data.code,
-                oldCode: existingParameterSubCategory.code,
-                parameterId: data.parameterId || existingParameterSubCategory.parameterId,
-                currentId: id
-            });
-            
+        // Check for duplicate name if name is being updated
+        if (data.name && data.name !== existingParameterSubCategory.name) {
             const duplicateCheck = await ParameterSubCategory.findOne({
                 parameterId: data.parameterId || existingParameterSubCategory.parameterId,
                 labId,
-                code: data.code,
+                name: data.name,
                 delete: false,
                 _id: { $ne: id }
             });
-            
-            console.log('Duplicate check result:', duplicateCheck);
-            
+
             if (duplicateCheck) {
                 return {
                     ...Responses.alreadyExist,
-                    clientMessage: { Message: 'A parameter subcategory with this code already exists for the specified parameter' }
+                    clientMessage: { Message: 'A parameter subcategory with this name already exists for the specified parameter' }
                 };
             }
         }
@@ -187,7 +178,7 @@ async function updateParameterSubCategoryDb(id, data, labId) {
         if (error.code === 11000) {
             return {
                 ...Responses.alreadyExist,
-                clientMessage: { Message: 'A parameter subcategory with this code already exists for the specified parameter' }
+                clientMessage: { Message: 'A parameter subcategory with this name already exists for the specified parameter' }
             };
         }
         return Responses.tryAgain;

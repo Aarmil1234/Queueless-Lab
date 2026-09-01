@@ -12,26 +12,23 @@ const ParameterSubCategory = require('../../models/parameterSubCategoryModel');
 const sanitizeParameterSubCategory = (payload = {}) => {
     const sanitized = {
         ...(payload.parameterId && { parameterId: payload.parameterId }),
-        
-        ...(payload.code && {
-            code: String(payload.code).trim().toUpperCase()
-        }),
-        
+
         ...(payload.name && {
             name: String(payload.name).trim()
         }),
-        
+
+        ...(payload.unit !== undefined && {
+            unit: payload.unit ? String(payload.unit).trim() : null
+        }),
+
         ...(payload.isActive !== undefined && {
             isActive: Boolean(payload.isActive)
         })
     };
-    
+
     // Additional validation
     if (!sanitized.parameterId) {
         throw new Error('parameterId is required');
-    }
-    if (!sanitized.code) {
-        throw new Error('code is required');
     }
     if (!sanitized.name) {
         throw new Error('name is required');

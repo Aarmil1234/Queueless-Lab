@@ -276,22 +276,71 @@ const addPatientReport = async (req, res) => {
         // Resolve the reference range for every parameter against this patient's
         // age/gender so the generated PDF's REF VALUE column is populated.
         const testReportForPDF = await Promise.all((savedReport.testReport || []).map(async test => {
-            const resolvedRanges = await resolveParameterRanges(test.testParameters || [], patient);
+            // Work with plain objects so every stored field is readable.
+            const rawParams = (test.testParameters || []).map(p => (p && p.toObject ? p.toObject() : p));
+
+            const resolvedRanges = await resolveParameterRanges(rawParams, patient);
             const rangeByParamId = new Map(
                 resolvedRanges.map(r => [r.parameterId, r])
             );
 
+            // Legacy / free-form results were written to the testResult Map.
+            // Build a case-insensitive lookup so a structured row that has no
+            // value of its own can still fall back to what was entered there.
+            const legacyResult = test.testResult instanceof Map
+                ? Object.fromEntries(test.testResult)
+                : (test.testResult && typeof test.testResult === "object" ? test.testResult : {});
+            const legacyByKey = new Map(
+                Object.entries(legacyResult).map(([k, v]) => [String(k).trim().toLowerCase(), v])
+            );
+            const legacyUnit = legacyResult.unit ?? legacyResult.units ?? "";
+            const legacyRangeText = (() => {
+                const rr = legacyResult.referenceRange ?? legacyResult.refValue ?? legacyResult.range;
+                if (!rr) return "";
+                if (typeof rr === "object") {
+                    const min = rr.min ?? rr.minValue ?? rr.from;
+                    const max = rr.max ?? rr.maxValue ?? rr.to;
+                    return (min !== undefined || max !== undefined) ? `${min ?? ""} - ${max ?? ""}`.trim() : "";
+                }
+                return String(rr);
+            })();
+
+            const isFilled = (v) => v !== undefined && v !== null && v !== "";
+
             return {
                 testName: test.testName || "Lab Test",
                 testResult: test.testResult || null,
-                testParameters: (test.testParameters || []).map(p => {
-                    const resolved = rangeByParamId.get(p.parameterId ? p.parameterId.toString() : "");
+                testParameters: rawParams.map(p => {
+                    const pid = p.parameterId ? p.parameterId.toString() : "";
+                    const resolved = rangeByParamId.get(pid);
+                    const parameterName = resolved?.parameterName || p.parameterName || p.parameter || "";
+                    const subName = resolved?.subCategoryName || p.subCategoryName || "";
+
+                    // value: structured row first, then the legacy map keyed by
+                    // sub-parameter name, then parameter name.
+                    const legacyValue = isFilled(subName) ? legacyByKey.get(subName.trim().toLowerCase()) : undefined;
+                    const legacyValueByParam = legacyByKey.get(String(parameterName).trim().toLowerCase());
+                    const value = isFilled(p.value) ? p.value
+                        : isFilled(legacyValue) ? legacyValue
+                        : isFilled(legacyValueByParam) ? legacyValueByParam
+                        : "";
+
+                    const unit = p.unit || resolved?.unit || legacyUnit || "";
+
+                    const referenceRange = resolved?.referenceRange?.text
+                        || p.referenceRange
+                        || p.referenceRangeText
+                        || legacyRangeText
+                        || null;
+
                     return {
-                        parameterName: resolved?.parameterName || p.parameterName || p.parameter || "",
-                        value: p.value ?? "",
-                        unit: p.unit || "",
+                        parameterName: subName && subName !== parameterName
+                            ? `${parameterName} (${subName})`
+                            : parameterName,
+                        value: value ?? "",
+                        unit,
                         isCritical: p.isCritical ?? (p.status === "CRITICAL"),
-                        referenceRange: resolved?.referenceRange?.text || p.referenceRange || p.referenceRangeText || null,
+                        referenceRange,
                         remarks: p.notes || p.remarks || ""
                     };
                 })

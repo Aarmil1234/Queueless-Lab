@@ -8,13 +8,6 @@ const parameterSchema = new mongoose.Schema({
         required: true,
         index: true
     },
-    code: {
-        type: String,
-        required: true,
-        unique: false,
-        trim: true,
-        uppercase: true
-    },
     labId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'LaboratoryOwner',
@@ -35,11 +28,6 @@ const parameterSchema = new mongoose.Schema({
         enum: ['NUMERIC', 'POS_NEG', 'TEXT'],
         required: true
     },
-    unit: {
-        type: String,
-        default: null,
-        trim: true
-    },
     isActive: {
         type: Boolean,
         default: true
@@ -57,15 +45,6 @@ const parameterSchema = new mongoose.Schema({
 
 parameterSchema.index({ category: 1 });
 parameterSchema.index({ isActive: 1 });
-
-// Unique code per test report (ignoring soft-deleted rows)
-parameterSchema.index(
-    { testReportId: 1, code: 1 },
-    {
-        unique: true,
-        partialFilterExpression: { delete: false }
-    }
-);
 
 // Validate parent TestReport exists and is active before saving a Parameter under it
 parameterSchema.pre('save', async function () {
@@ -89,10 +68,8 @@ module.exports = Parameter;
 
 // {
 //   "testReportId": "5f8d0d55b54764421b6b0b1a",
-//   "code": "HB",
 //   "name": "Hemoglobin",
 //   "category": "CBC",
 //   "type": "NUMERIC",
-//   "unit": "g/dL",
 //   "isActive": true
 // }

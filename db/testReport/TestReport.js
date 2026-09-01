@@ -43,7 +43,7 @@ async function getTestReportParametersWithSubCategoriesDb(testReportId, labId) {
             delete: false,
             isActive: true
         })
-        .select('code name category type unit')
+        .select('name category type')
         .lean();
 
         // Get subcategories for each parameter
@@ -54,7 +54,7 @@ async function getTestReportParametersWithSubCategoriesDb(testReportId, labId) {
                     delete: false,
                     isActive: true
                 })
-                .select('code name')
+                .select('name unit')
                 .lean();
 
                 return {

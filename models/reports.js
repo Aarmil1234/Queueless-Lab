@@ -22,6 +22,11 @@ const testParameterSchema = new Schema({
         enum: ['NORMAL', 'ABNORMAL', 'CRITICAL', 'PENDING'],
         default: 'PENDING'
     },
+    // Snapshot of the sub-parameter's unit at submission time
+    unit: {
+        type: String,
+        default: ''
+    },
     notes: {
         type: String,
         default: ''

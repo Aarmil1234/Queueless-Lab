@@ -10,13 +10,9 @@ const {
 
 const sanitizeParameterPayload = (payload = {}) => ({
     ...(payload.testReportId && { testReportId: payload.testReportId }),
-    ...(payload.code && { code: payload.code.trim().toUpperCase() }),
     ...(payload.name && { name: payload.name.trim() }),
     ...(payload.category && { category: payload.category.trim() }),
     ...(payload.type && { type: payload.type.toUpperCase() }),
-    ...(payload.unit !== undefined && {
-        unit: payload.unit ? payload.unit.trim() : null
-    }),
     ...(payload.isActive !== undefined && { isActive: payload.isActive })
 });
 
