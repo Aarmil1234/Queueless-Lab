@@ -6,6 +6,21 @@ const LaboratoryOwner = require("../models/laboratoryOwner");
 
 // Save PDF to local file system
 
+const formatDateTime = (date) => {
+    if (!date) return "N/A";
+
+    return new Date(date).toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true
+    });
+};
+
 const generatePatientReportPDF = async (report) => {
     const resolveLabName = async (reportData) => {
         if (reportData?.labName) {
@@ -187,11 +202,24 @@ const generatePatientReportPDF = async (report) => {
                 ["Mobile", report.mobileNumber]
             ];
 
+            // const registrationLines = [
+            //     ["Reg. Number", report.regNumber],
+            //     ["Reg. Date & Time", formatDateTime(report.regDateTime)],
+            //     ["Report Date & Time", formatDateTime(report.reportDate)],
+            //     ["Referred By", report.referredBy ? (/^dr\.?\s/i.test(String(report.referredBy)) ? String(report.referredBy) : `Dr. ${report.referredBy}`) : "N/A"],
+            //     ["Ref. Doctor Contact", report.referredByContact]
+            // ];
+
             const registrationLines = [
                 ["Reg. Number", report.regNumber],
                 ["Reg. Date & Time", formatDateTime(report.regDateTime)],
                 ["Report Date & Time", formatDateTime(report.reportDate)],
-                ["Referred By", report.referredBy ? (/^dr\.?\s/i.test(String(report.referredBy)) ? String(report.referredBy) : `Dr. ${report.referredBy}`) : "N/A"],
+                ["Referred By", report.referredBy 
+                    ? (/^dr\.?\s/i.test(String(report.referredBy))
+                        ? String(report.referredBy)
+                        : `Dr. ${report.referredBy}`)
+                    : "N/A"
+                ],
                 ["Ref. Doctor Contact", report.referredByContact]
             ];
 

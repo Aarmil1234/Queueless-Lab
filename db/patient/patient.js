@@ -5,6 +5,50 @@ const bcrypt = require("bcrypt");
 const Patient = require("../../models/patient");
 const Report = require("../../models/reports");
 const { resolveParameterRanges } = require("../../utils/parameterRangeResolver");
+const Lab = require("../../models/laboratoryOwner");
+
+const generateCaseId = async (labId) => {
+    const lab = await Lab.findById(labId);
+
+    if (!lab) {
+        throw new Error("Lab not found");
+    }
+
+    // First 3 letters of lab name
+    const prefix = lab.labName
+        .replace(/[^a-zA-Z]/g, "")
+        .substring(0, 3)
+        .toUpperCase();
+
+    // Current IST date
+    const date = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Kolkata",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+    })
+        .format(new Date())
+        .replace(/-/g, "");
+
+    // Find today's patients for this lab
+    const patients = await Patient.find({
+        labId,
+        caseId: new RegExp(`^${prefix}${date}\\d+$`)
+    }).sort({ caseId: -1 });
+
+    let sequence = 1;
+
+    if (patients.length > 0) {
+        const latestCaseId = patients[0].caseId;
+
+        // Remove prefix + date
+        const lastNumber = latestCaseId.replace(`${prefix}${date}`, "");
+
+        sequence = Number(lastNumber) + 1;
+    }
+
+    return `${prefix}${date}${String(sequence).padStart(3, "0")}`;
+};
 
 const addPatientDb = async (data) => {
     try {
@@ -24,7 +68,9 @@ const addPatientDb = async (data) => {
         // }
 
         //generate case id randonmly as of now
-        const caseId = "CASE-" + Math.floor(Math.random() * 1000000);
+        // const caseId = "CASE-" + Math.floor(Math.random() * 1000000);
+        const caseId = await generateCaseId(labId);
+
         const patient = new Patient({ caseId, patientName, gender, dateOfBirth, age, referredByDoctor, doctorContactNo, address, mobileNumber, testReports, city, labId });
         await patient.save();
         return {
