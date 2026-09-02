@@ -106,117 +106,484 @@ const getAllPatientDb = async (labId) => {
     }
 }
 
-const getPatientsWithPendingReportsDb = async (labId) => {
+// const getPatientsWithPendingReportsDb = async (labId) => {
+//     try {
+
+//         // Find reports that have at least one test with isReportSubmitted = false
+//         const reportsWithPendingTests = await Report.find({
+//             'testReport.isReportSubmitted': false,
+//             labId
+//         }).select('patientId testReport');
+
+//         // Extract unique patient IDs and create a map of patientId to reportIds/pendingTests
+//         const patientIds = [...new Set(reportsWithPendingTests.map(report => report.patientId))];
+//         const patientReportMap = {};
+
+//         reportsWithPendingTests.forEach(report => {
+//             if (!patientReportMap[report.patientId]) {
+//                 patientReportMap[report.patientId] = { reportIds: [], pendingTests: [] };
+//             }
+//             patientReportMap[report.patientId].reportIds.push(report.id);
+
+//             report.testReport
+//                 .filter(test => test.isReportSubmitted === false)
+//                 .forEach(test => {
+//                     patientReportMap[report.patientId].pendingTests.push({
+//                         reportId: report.id,
+//                         testReportId: test.testReportId,
+//                         testName: test.testName
+//                     });
+//                 });
+//         });
+
+//         // Find patients with those IDs
+//         const patients = await Patient.find({
+//             '_id': { $in: patientIds },
+//             labId
+//         });
+
+//         // Add reportIds and pending test names to each patient
+//         const patientsWithReportIds = patients.map(patient => ({
+//             ...patient.toObject(),
+//             reportIds: patientReportMap[patient._id]?.reportIds || [],
+//             pendingTests: patientReportMap[patient._id]?.pendingTests || []
+//         }));
+
+//         return patientsWithReportIds;
+//     } catch (error) {
+//         console.error('Error in getPatientsWithPendingReportsDb:', error);
+//         return [];
+//     }
+// }
+
+// const getPatientsWithSubmittedReportsDb = async (labId) => {
+//     try {
+
+//         const reportsWithSubmittedTests = await Report.find({
+//             'testReport.isReportSubmitted': true,
+//             labId
+//         }).select('patientId testReport');
+
+//         // Extract unique patient IDs and create a map of patientId to reportIds/submittedTests
+//         const patientIds = [...new Set(reportsWithSubmittedTests.map(report => report.patientId))];
+//         const patientReportMap = {};
+
+//         reportsWithSubmittedTests.forEach(report => {
+//             if (!patientReportMap[report.patientId]) {
+//                 patientReportMap[report.patientId] = { reportIds: [], submittedTests: [] };
+//             }
+//             patientReportMap[report.patientId].reportIds.push(report.id);
+
+//             report.testReport
+//                 .filter(test => test.isReportSubmitted === true)
+//                 .forEach(test => {
+//                     patientReportMap[report.patientId].submittedTests.push({
+//                         reportId: report.id,
+//                         testReportId: test.testReportId,
+//                         testName: test.testName,
+//                         // Raw params kept only to resolve reference ranges once the
+//                         // patient (age/gender) is known below; stripped before returning.
+//                         _rawParameters: test.testParameters || []
+//                     });
+//                 });
+//         });
+
+//         // Find patients with those IDs
+//         const patients = await Patient.find({
+//             '_id': { $in: patientIds },
+//             labId
+//         });
+
+//         // Add reportIds and submitted test names to each patient
+//         const patientsWithReportIds = await Promise.all(patients.map(async patient => {
+//             const mapEntry = patientReportMap[patient._id] || { reportIds: [], submittedTests: [] };
+
+//             const submittedTests = await Promise.all(mapEntry.submittedTests.map(async ({ _rawParameters, ...rest }) => ({
+//                 ...rest,
+//                 // Reference range per parameter, resolved for this patient's age/gender
+//                 testParameters: await resolveParameterRanges(_rawParameters, patient)
+//             })));
+
+//             return {
+//                 ...patient.toObject(),
+//                 reportIds: mapEntry.reportIds,
+//                 submittedTests
+//             };
+//         }));
+
+//         return patientsWithReportIds;
+//     } catch (error) {
+//         console.error('Error in getPatientsWithSubmittedReportsDb:', error);
+//         return [];
+//     }
+// }
+
+const getPatientsWithPendingReportsDb = async (labId, search = '') => {
     try {
 
-        // Find reports that have at least one test with isReportSubmitted = false
-        const reportsWithPendingTests = await Report.find({
-            'testReport.isReportSubmitted': false,
-            labId
-        }).select('patientId testReport');
+        const reportQuery = {
+            labId,
+            'testReport.isReportSubmitted': false
+        };
 
-        // Extract unique patient IDs and create a map of patientId to reportIds/pendingTests
-        const patientIds = [...new Set(reportsWithPendingTests.map(report => report.patientId))];
+
+        // Add search filter only when search value exists
+        if (search && search.trim()) {
+
+            reportQuery.testReport = {
+                $elemMatch: {
+                    isReportSubmitted: false,
+                    $or: [
+                        {
+                            testName: {
+                                $regex: search.trim(),
+                                $options: 'i'
+                            }
+                        },
+                        {
+                            testCode: {
+                                $regex: search.trim(),
+                                $options: 'i'
+                            }
+                        }
+                    ]
+                }
+            };
+        }
+
+
+        // Find reports
+        const reportsWithPendingTests = await Report.find(reportQuery)
+            .select('patientId testReport');
+
+
+        const patientIds = [
+            ...new Set(
+                reportsWithPendingTests.map(
+                    report => report.patientId.toString()
+                )
+            )
+        ];
+
+
         const patientReportMap = {};
 
+
         reportsWithPendingTests.forEach(report => {
-            if (!patientReportMap[report.patientId]) {
-                patientReportMap[report.patientId] = { reportIds: [], pendingTests: [] };
+
+            const patientId = report.patientId.toString();
+
+
+            if (!patientReportMap[patientId]) {
+                patientReportMap[patientId] = {
+                    reportIds: [],
+                    pendingTests: []
+                };
             }
-            patientReportMap[report.patientId].reportIds.push(report.id);
+
 
             report.testReport
-                .filter(test => test.isReportSubmitted === false)
+                .filter(test => {
+
+                    if (test.isReportSubmitted !== false) {
+                        return false;
+                    }
+
+
+                    // If no search, return all pending tests
+                    if (!search || !search.trim()) {
+                        return true;
+                    }
+
+
+                    const searchValue =
+                        search.trim().toLowerCase();
+
+
+                    return (
+                        test.testName
+                            ?.toLowerCase()
+                            .includes(searchValue) ||
+
+                        test.testCode
+                            ?.toLowerCase()
+                            .includes(searchValue)
+                    );
+
+                })
                 .forEach(test => {
-                    patientReportMap[report.patientId].pendingTests.push({
-                        reportId: report.id,
-                        testReportId: test.testReportId,
-                        testName: test.testName
-                    });
+
+                    patientReportMap[patientId]
+                        .pendingTests
+                        .push({
+                            reportId: report.id,
+                            testReportId: test.testReportId,
+                            testName: test.testName,
+                            testCode: test.testCode
+                        });
+
                 });
+
         });
 
-        // Find patients with those IDs
+
+        // Important: only patients with matching tests
+        const filteredPatientIds =
+            Object.keys(patientReportMap)
+                .filter(
+                    patientId =>
+                        patientReportMap[patientId]
+                            .pendingTests
+                            .length > 0
+                );
+
+
         const patients = await Patient.find({
-            '_id': { $in: patientIds },
+            _id: {
+                $in: filteredPatientIds
+            },
             labId
         });
 
-        // Add reportIds and pending test names to each patient
-        const patientsWithReportIds = patients.map(patient => ({
-            ...patient.toObject(),
-            reportIds: patientReportMap[patient._id]?.reportIds || [],
-            pendingTests: patientReportMap[patient._id]?.pendingTests || []
-        }));
+
+        const patientsWithReportIds = patients.map(patient => {
+
+            const patientId =
+                patient._id.toString();
+
+
+            return {
+                ...patient.toObject(),
+
+                reportIds:
+                    patientReportMap[patientId]
+                        ?.reportIds || [],
+
+                pendingTests:
+                    patientReportMap[patientId]
+                        ?.pendingTests || []
+            };
+
+        });
+
 
         return patientsWithReportIds;
-    } catch (error) {
-        console.error('Error in getPatientsWithPendingReportsDb:', error);
-        return [];
-    }
-}
 
-const getPatientsWithSubmittedReportsDb = async (labId) => {
+    } catch (error) {
+
+        console.error(
+            'Error in getPatientsWithPendingReportsDb:',
+            error
+        );
+
+        throw error;
+    }
+};
+
+const getPatientsWithSubmittedReportsDb = async (
+    labId,
+    {
+        filter = 'all',
+        startDate,
+        endDate
+    } = {}
+) => {
     try {
+
+        let dateFilter = {};
+
+        const now = new Date();
+
+        switch (filter) {
+
+            case 'lastWeek': {
+                const lastWeek = new Date();
+
+                lastWeek.setDate(now.getDate() - 7);
+
+                dateFilter = {
+                    createdAt: {
+                        $gte: lastWeek,
+                        $lte: now
+                    }
+                };
+
+                break;
+            }
+
+
+            case 'lastMonth': {
+                const lastMonth = new Date();
+
+                lastMonth.setMonth(now.getMonth() - 1);
+
+                dateFilter = {
+                    createdAt: {
+                        $gte: lastMonth,
+                        $lte: now
+                    }
+                };
+
+                break;
+            }
+
+
+            case 'lastYear': {
+                const lastYear = new Date();
+
+                lastYear.setFullYear(now.getFullYear() - 1);
+
+                dateFilter = {
+                    createdAt: {
+                        $gte: lastYear,
+                        $lte: now
+                    }
+                };
+
+                break;
+            }
+
+
+            case 'custom': {
+
+                if (!startDate || !endDate) {
+                    throw new Error(
+                        'startDate and endDate are required for custom filter'
+                    );
+                }
+
+                const customStartDate = new Date(startDate);
+                const customEndDate = new Date(endDate);
+
+                // Include the complete end date
+                customEndDate.setHours(23, 59, 59, 999);
+
+                dateFilter = {
+                    createdAt: {
+                        $gte: customStartDate,
+                        $lte: customEndDate
+                    }
+                };
+
+                break;
+            }
+
+
+            case 'all':
+            default:
+                dateFilter = {};
+        }
+
 
         const reportsWithSubmittedTests = await Report.find({
             'testReport.isReportSubmitted': true,
-            labId
+            labId,
+            ...dateFilter
         }).select('patientId testReport');
 
-        // Extract unique patient IDs and create a map of patientId to reportIds/submittedTests
-        const patientIds = [...new Set(reportsWithSubmittedTests.map(report => report.patientId))];
+
+        // Extract unique patient IDs
+        const patientIds = [
+            ...new Set(
+                reportsWithSubmittedTests.map(
+                    report => report.patientId.toString()
+                )
+            )
+        ];
+
+
         const patientReportMap = {};
 
+
         reportsWithSubmittedTests.forEach(report => {
-            if (!patientReportMap[report.patientId]) {
-                patientReportMap[report.patientId] = { reportIds: [], submittedTests: [] };
+
+            const patientId = report.patientId.toString();
+
+            if (!patientReportMap[patientId]) {
+                patientReportMap[patientId] = {
+                    reportIds: [],
+                    submittedTests: []
+                };
             }
-            patientReportMap[report.patientId].reportIds.push(report.id);
+
+
+            patientReportMap[patientId].reportIds.push(report._id);
+
 
             report.testReport
                 .filter(test => test.isReportSubmitted === true)
                 .forEach(test => {
-                    patientReportMap[report.patientId].submittedTests.push({
-                        reportId: report.id,
+
+                    patientReportMap[patientId].submittedTests.push({
+                        reportId: report._id,
                         testReportId: test.testReportId,
                         testName: test.testName,
-                        // Raw params kept only to resolve reference ranges once the
-                        // patient (age/gender) is known below; stripped before returning.
                         _rawParameters: test.testParameters || []
                     });
+
                 });
+
         });
 
-        // Find patients with those IDs
+
+        // Find patients
         const patients = await Patient.find({
-            '_id': { $in: patientIds },
+            _id: { $in: patientIds },
             labId
         });
 
-        // Add reportIds and submitted test names to each patient
-        const patientsWithReportIds = await Promise.all(patients.map(async patient => {
-            const mapEntry = patientReportMap[patient._id] || { reportIds: [], submittedTests: [] };
 
-            const submittedTests = await Promise.all(mapEntry.submittedTests.map(async ({ _rawParameters, ...rest }) => ({
-                ...rest,
-                // Reference range per parameter, resolved for this patient's age/gender
-                testParameters: await resolveParameterRanges(_rawParameters, patient)
-            })));
+        const patientsWithReportIds = await Promise.all(
+            patients.map(async patient => {
 
-            return {
-                ...patient.toObject(),
-                reportIds: mapEntry.reportIds,
-                submittedTests
-            };
-        }));
+                const patientId = patient._id.toString();
+
+                const mapEntry =
+                    patientReportMap[patientId] || {
+                        reportIds: [],
+                        submittedTests: []
+                    };
+
+
+                const submittedTests = await Promise.all(
+
+                    mapEntry.submittedTests.map(
+                        async ({ _rawParameters, ...rest }) => ({
+                            ...rest,
+
+                            testParameters:
+                                await resolveParameterRanges(
+                                    _rawParameters,
+                                    patient
+                                )
+                        })
+                    )
+
+                );
+
+
+                return {
+                    ...patient.toObject(),
+                    reportIds: mapEntry.reportIds,
+                    submittedTests
+                };
+
+            })
+        );
+
 
         return patientsWithReportIds;
+
     } catch (error) {
-        console.error('Error in getPatientsWithSubmittedReportsDb:', error);
-        return [];
+
+        console.error(
+            'Error in getPatientsWithSubmittedReportsDb:',
+            error
+        );
+
+        throw error;
     }
-}
+};
 
 module.exports = {
     addPatientDb,

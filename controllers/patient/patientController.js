@@ -73,23 +73,80 @@ const getAllPatient = async (req, res) => {
     }
 }
 
+// const getPatientsWithPendingReports = async (req, res) => {
+//     try {
+//         const result = await getPatientsWithPendingReportsDb(req.labId);
+//         return sendResponse(req, res, 200, result);
+//     } catch (error) {
+//         return sendResponse(req, res, 500, { Message: error.message });
+//     }
+// }
+
+// const getPatientsWithSubmittedReports = async (req, res) => {
+//     try {
+//         const result = await getPatientsWithSubmittedReportsDb(req.labId);
+//         return sendResponse(req, res, 200, result);
+//     } catch (error) {
+//         return sendResponse(req, res, 500, { Message: error.message });
+//     }
+// }
+
 const getPatientsWithPendingReports = async (req, res) => {
     try {
-        const result = await getPatientsWithPendingReportsDb(req.labId);
-        return sendResponse(req, res, 200, result);
+
+        const { search = '' } = req.query;
+
+        const result =
+            await getPatientsWithPendingReportsDb(
+                req.labId,
+                search
+            );
+
+        return sendResponse(
+            req,
+            res,
+            200,
+            result
+        );
+
     } catch (error) {
-        return sendResponse(req, res, 500, { Message: error.message });
+
+        return sendResponse(
+            req,
+            res,
+            500,
+            {
+                Message: error.message
+            }
+        );
     }
-}
+};
 
 const getPatientsWithSubmittedReports = async (req, res) => {
     try {
-        const result = await getPatientsWithSubmittedReportsDb(req.labId);
+        const {
+            filter = 'all',
+            startDate,
+            endDate
+        } = req.query;
+
+        const result = await getPatientsWithSubmittedReportsDb(
+            req.labId,
+            {
+                filter,
+                startDate,
+                endDate
+            }
+        );
+
         return sendResponse(req, res, 200, result);
+
     } catch (error) {
-        return sendResponse(req, res, 500, { Message: error.message });
+        return sendResponse(req, res, 500, {
+            Message: error.message
+        });
     }
-}
+};
 
 module.exports = {
     addPatient,
