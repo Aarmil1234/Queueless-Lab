@@ -459,22 +459,22 @@ const generatePatientReportPDF = async (report) => {
                     cursor = TABLE_TOP;
                 }
 
-                fillRect(LEFT, cursor, PAGE_W, 24, NAVY);
-                doc.fillColor(WHITE).fontSize(11).font("Helvetica-Bold")
-                    .text("RESULT METADATA", LEFT + 10, cursor + 7, { lineBreak: false });
-                cursor += 32;
+                // fillRect(LEFT, cursor, PAGE_W, 24, NAVY);
+                // doc.fillColor(WHITE).fontSize(11).font("Helvetica-Bold")
+                //     .text("RESULT METADATA", LEFT + 10, cursor + 7, { lineBreak: false });
+                // cursor += 32;
 
-                metadataRows.forEach(([label, value]) => {
-                    if (cursor > CONTENT_BOTTOM_LIMIT) {
-                        goToNewPage();
-                        cursor = TABLE_TOP;
-                    }
-                    doc.fillColor(GRAY).fontSize(8).font("Helvetica")
-                        .text(label, LEFT + 8, cursor, { lineBreak: false });
-                    doc.fillColor(BLACK).fontSize(10).font("Helvetica-Bold")
-                        .text(value, LEFT + 120, cursor, { lineBreak: false, width: PAGE_W - 120 });
-                    cursor += 18;
-                });
+                // metadataRows.forEach(([label, value]) => {
+                //     if (cursor > CONTENT_BOTTOM_LIMIT) {
+                //         goToNewPage();
+                //         cursor = TABLE_TOP;
+                //     }
+                //     doc.fillColor(GRAY).fontSize(8).font("Helvetica")
+                //         .text(label, LEFT + 8, cursor, { lineBreak: false });
+                //     doc.fillColor(BLACK).fontSize(10).font("Helvetica-Bold")
+                //         .text(value, LEFT + 120, cursor, { lineBreak: false, width: PAGE_W - 120 });
+                //     cursor += 18;
+                // });
             }
         };
 
