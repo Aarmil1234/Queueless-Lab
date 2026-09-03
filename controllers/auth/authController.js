@@ -2,15 +2,15 @@ const { sendResponse } = require("../../utils/sendResponse");
 const LaboratoryOwner = require("../../models/laboratoryOwner");
 const { sendOtpSms, verifyOtpDB } = require("../../services/smsService");
 const jwt = require('jsonwebtoken');
+const LaboratoryOwnerSession = require('../../models/laboratoryOwnerSession');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 async function login(req, res) {
     try {
-        const { labMobileNumber } = req.body;
-        const { password } = req.body;
+    const { labMobileNumber, password } = req.body;
 
-        // Validate input
+        // Validate mobile number
         if (!labMobileNumber) {
             return sendResponse(req, res, 400, {
                 success: false,
@@ -18,7 +18,7 @@ async function login(req, res) {
             });
         }
 
-        // Validate input
+        // Validate password
         if (!password) {
             return sendResponse(req, res, 400, {
                 success: false,
@@ -26,8 +26,15 @@ async function login(req, res) {
             });
         }
 
-        // Find user by mobile number (password is compared separately since it's hashed)
-        const owner = await LaboratoryOwner.findOne({ labMobileNumber, isActive: true }).select('+password');
+        // Find laboratory owner
+        const owner = await LaboratoryOwner
+            .findOne({
+                labMobileNumber,
+                isActive: true
+            })
+            .select('+password');
+
+        // Validate user and password
         if (!owner || !(await owner.comparePassword(password))) {
             return sendResponse(req, res, 401, {
                 success: false,
@@ -35,18 +42,28 @@ async function login(req, res) {
             });
         }
 
-        // Generate JWT token
+        // Create JWT token
         const token = jwt.sign(
-            { id: owner._id, email: owner.email, labId: owner._id },
+            {
+                id: owner._id,
+                email: owner.email,
+                labId: owner._id
+            },
             JWT_SECRET,
-            // { expiresIn: '24h' }
+            {
+                expiresIn: '24h'
+            }
         );
 
-        // Save token for middleware validation and lab-specific access
-        owner.token = token;
-        await owner.save({ validateBeforeSave: false });
+        // Create a separate session for this login/device
+        await LaboratoryOwnerSession.create({
+            ownerId: owner._id,
+            token,
+            deviceInfo: req.headers['user-agent'] || '',
+            isActive: true
+        });
 
-        // Return success response with token
+        // Return success response
         return sendResponse(req, res, 200, {
             success: true,
             data: {
@@ -62,6 +79,7 @@ async function login(req, res) {
 
     } catch (error) {
         console.error('Login error:', error);
+
         return sendResponse(req, res, 500, {
             success: false,
             message: 'Server error during login',
@@ -69,6 +87,28 @@ async function login(req, res) {
         });
     }
 }
+
+async function logout(req, res) {
+    try {
+        await LaboratoryOwnerSession.findByIdAndUpdate(
+            req.session._id,
+            {
+                isActive: false
+            }
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: 'Logged out successfully'
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'Logout failed'
+        });
+    }
+};
 
 async function signup(req, res) {
     try {
@@ -264,5 +304,6 @@ module.exports = {
     signup,
     forgetPassword,
     resetPassword,
-    updatePassword
+    updatePassword,
+    logout
 };

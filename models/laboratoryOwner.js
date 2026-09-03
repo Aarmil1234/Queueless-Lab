@@ -39,10 +39,10 @@ const laboratoryOwnerSchema = new Schema({
         required: [true, 'Password is required'],
         select: false
     },
-    token: {
-        type: String,
-        default: null
-    },
+    // token: {
+    //     type: String,
+    //     default: null
+    // },
     resetOtp: {
         type: String,
         select: false

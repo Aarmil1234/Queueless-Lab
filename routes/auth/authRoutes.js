@@ -17,4 +17,6 @@ router.post('/reset-password', authController.resetPassword);
 // POST /api/auth/update-password - authenticated password change (current password required)
 router.post('/update-password', authMiddleware, authController.updatePassword);
 
+router.post('/logout', authMiddleware, authController.logout);
+
 module.exports = router;
