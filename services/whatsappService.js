@@ -22,7 +22,8 @@ const sendPatientRegistrationMessage = async (mobileNumber, patientName, labName
                     template_id: 356612,
                     phone_number: phone,
                     "templateVariable-name-1": patientName,
-                    "templateVariable-name-2": labName || "Queueless"
+                    "templateVariable-name-2": labName || "Queueless",
+                    "templateVariable-name-3": labName || "Queueless"
                 }
             }
         );
