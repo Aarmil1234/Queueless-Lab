@@ -140,12 +140,12 @@ const generatePatientReportPDF = async (report) => {
             }
         };
 
-        const formatDateTime = (value) => {
-            if (!value) return "N/A";
-            const d = new Date(value);
-            if (Number.isNaN(d.getTime())) return stringify(value);
-            return `${d.toLocaleDateString("en-IN")} ${d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`;
-        };
+        // const formatDateTime = (value) => {
+        //     if (!value) return "N/A";
+        //     const d = new Date(value);
+        //     if (Number.isNaN(d.getTime())) return stringify(value);
+        //     return `${d.toLocaleDateString("en-IN")} ${d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`;
+        // };
 
         const normalizeResultObject = (value) => {
             if (value instanceof Map) {

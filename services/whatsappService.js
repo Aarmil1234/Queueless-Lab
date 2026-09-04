@@ -54,24 +54,24 @@ const sendWhatsAppMessages = async (type, numbers, data) => {
                     ? data.doctorContactNo
                     : `+${data.doctorContactNo}`;
 
-                    const endpoint =
-                        `https://app.aibotick.com/api/v1/whatsapp/send/template`
-                         +
-                        `?apiToken=${encodeURIComponent(process.env.AIBOTICK_API_KEY)}` +
-                        `&phone_number_id=${process.env.PHONE_NUMBER_ID}` +
-                        `&template_id=394626` +
-                        `&phone_number=${encodeURIComponent(phone)}` +
-                        `&templateVariable-name-1=${encodeURIComponent(data.patientName)}` +
-                        `&template_header_media_url=${encodeURIComponent(data.pdfUrl)}`;
+                    // const endpoint =
+                    //     `https://app.aibotick.com/api/v1/whatsapp/send/template`
+                    //      +
+                    //     `?apiToken=${encodeURIComponent(process.env.AIBOTICK_API_KEY)}` +
+                    //     `&phone_number_id=${process.env.PHONE_NUMBER_ID}` +
+                    //     `&template_id=394626` +
+                    //     `&phone_number=${encodeURIComponent(phone)}` +
+                    //     `&templateVariable-name-1=${encodeURIComponent(data.patientName)}` +
+                    //     `&template_header_media_url=${encodeURIComponent(data.pdfUrl)}`;
 
-                        const payload = {
-                            apiToken: process.env.AIBOTICK_API_KEY,
-                            phone_number_id: process.env.PHONE_NUMBER_ID,
-                            template_id: 394626,
-                            phone_number: phone,
-                            "templateVariable-name-1": data.patientName,
-                            template_header_media_url: data.pdfUrl
-                        };
+                    //     const payload = {
+                    //         apiToken: process.env.AIBOTICK_API_KEY,
+                    //         phone_number_id: process.env.PHONE_NUMBER_ID,
+                    //         template_id: 394626,
+                    //         phone_number: phone,
+                    //         "templateVariable-name-1": data.patientName,
+                    //         template_header_media_url: data.pdfUrl
+                    //     };
 
                     const response = await axios.get(
                         "https://app.aibotick.com/api/v1/whatsapp/send/template",
