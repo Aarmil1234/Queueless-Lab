@@ -7,6 +7,91 @@ const Report = require("../../models/reports");
 const { resolveParameterRanges } = require("../../utils/parameterRangeResolver");
 const Lab = require("../../models/laboratoryOwner");
 
+// const generateCaseId = async (labId) => {
+//     const lab = await Lab.findById(labId);
+
+//     if (!lab) {
+//         throw new Error("Lab not found");
+//     }
+
+//     // First 3 letters of lab name
+//     const prefix = lab.labName
+//         .replace(/[^a-zA-Z]/g, "")
+//         .substring(0, 3)
+//         .toUpperCase();
+
+//     // Current IST date
+//     const date = new Intl.DateTimeFormat("en-CA", {
+//         timeZone: "Asia/Kolkata",
+//         year: "numeric",
+//         month: "2-digit",
+//         day: "2-digit"
+//     })
+//         .format(new Date())
+//         .replace(/-/g, "");
+
+//     // Find today's patients for this lab
+//     const patients = await Patient.find({
+//         labId,
+//         caseId: new RegExp(`^${prefix}${date}\\d+$`)
+//     }).sort({ caseId: -1 });
+
+//     let sequence = 1;
+
+//     if (patients.length > 0) {
+//         const latestCaseId = patients[0].caseId;
+
+//         // Remove prefix + date
+//         const lastNumber = latestCaseId.replace(`${prefix}${date}`, "");
+
+//         sequence = Number(lastNumber) + 1;
+//     }
+
+//     return `${prefix}${date}${String(sequence).padStart(3, "0")}`;
+// };
+
+const generateLabPrefix = async (labName, labId) => {
+    const cleanedName = labName
+        .replace(/[^a-zA-Z]/g, "")
+        .toUpperCase();
+
+    // First 2 letters from lab name
+    const firstTwo = cleanedName.substring(0, 2);
+
+    // Try original first 3 letters
+    const originalPrefix = cleanedName.substring(0, 3);
+
+    // Check if this prefix is already used by another lab
+    const existingPatient = await Patient.findOne({
+        labId: { $ne: labId },
+        caseId: new RegExp(`^${originalPrefix}\\d{8}\\d+$`)
+    });
+
+    // If original prefix is free, use it
+    if (!existingPatient) {
+        return originalPrefix;
+    }
+
+    // Otherwise keep first 2 letters
+    // and change only the 3rd letter
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+    for (const letter of letters) {
+        const newPrefix = `${firstTwo}${letter}`;
+
+        const exists = await Patient.findOne({
+            labId: { $ne: labId },
+            caseId: new RegExp(`^${newPrefix}\\d{8}\\d+$`)
+        });
+
+        if (!exists) {
+            return newPrefix;
+        }
+    }
+
+    throw new Error("No unique 3-letter prefix available");
+};
+
 const generateCaseId = async (labId) => {
     const lab = await Lab.findById(labId);
 
@@ -14,13 +99,11 @@ const generateCaseId = async (labId) => {
         throw new Error("Lab not found");
     }
 
-    // First 3 letters of lab name
-    const prefix = lab.labName
-        .replace(/[^a-zA-Z]/g, "")
-        .substring(0, 3)
-        .toUpperCase();
+    const prefix = await generateLabPrefix(
+        lab.labName,
+        labId
+    );
 
-    // Current IST date
     const date = new Intl.DateTimeFormat("en-CA", {
         timeZone: "Asia/Kolkata",
         year: "numeric",
@@ -30,7 +113,6 @@ const generateCaseId = async (labId) => {
         .format(new Date())
         .replace(/-/g, "");
 
-    // Find today's patients for this lab
     const patients = await Patient.find({
         labId,
         caseId: new RegExp(`^${prefix}${date}\\d+$`)
@@ -41,8 +123,10 @@ const generateCaseId = async (labId) => {
     if (patients.length > 0) {
         const latestCaseId = patients[0].caseId;
 
-        // Remove prefix + date
-        const lastNumber = latestCaseId.replace(`${prefix}${date}`, "");
+        const lastNumber = latestCaseId.replace(
+            `${prefix}${date}`,
+            ""
+        );
 
         sequence = Number(lastNumber) + 1;
     }
