@@ -268,11 +268,9 @@ const getPatientsWithPendingReportsDb = async (labId, search = '') => {
 
         const patientReportMap = {};
 
-
         reportsWithPendingTests.forEach(report => {
 
             const patientId = report.patientId.toString();
-
 
             if (!patientReportMap[patientId]) {
                 patientReportMap[patientId] = {
@@ -281,50 +279,114 @@ const getPatientsWithPendingReportsDb = async (labId, search = '') => {
                 };
             }
 
+            const matchingTests = report.testReport.filter(test => {
 
-            report.testReport
-                .filter(test => {
+                if (test.isReportSubmitted !== false) {
+                    return false;
+                }
 
-                    if (test.isReportSubmitted !== false) {
-                        return false;
-                    }
+                // No search → all pending tests
+                if (!search || !search.trim()) {
+                    return true;
+                }
+
+                const searchValue = search.trim().toLowerCase();
+
+                return (
+                    test.testName
+                        ?.toLowerCase()
+                        .includes(searchValue) ||
+
+                    test.testCode
+                        ?.toLowerCase()
+                        .includes(searchValue)
+                );
+            });
 
 
-                    // If no search, return all pending tests
-                    if (!search || !search.trim()) {
-                        return true;
-                    }
+            // Add reportId if this report contains matching pending tests
+            if (matchingTests.length > 0) {
+
+                const reportId = report._id.toString();
+
+                if (!patientReportMap[patientId].reportIds.includes(reportId)) {
+                    patientReportMap[patientId].reportIds.push(reportId);
+                }
+
+            }
 
 
-                    const searchValue =
-                        search.trim().toLowerCase();
+            matchingTests.forEach(test => {
 
+                patientReportMap[patientId]
+                    .pendingTests
+                    .push({
+                        reportId: report._id.toString(),
+                        testReportId: test.testReportId,
+                        testName: test.testName,
+                        testCode: test.testCode
+                    });
 
-                    return (
-                        test.testName
-                            ?.toLowerCase()
-                            .includes(searchValue) ||
-
-                        test.testCode
-                            ?.toLowerCase()
-                            .includes(searchValue)
-                    );
-
-                })
-                .forEach(test => {
-
-                    patientReportMap[patientId]
-                        .pendingTests
-                        .push({
-                            reportId: report.id,
-                            testReportId: test.testReportId,
-                            testName: test.testName,
-                            testCode: test.testCode
-                        });
-
-                });
+            });
 
         });
+
+        // reportsWithPendingTests.forEach(report => {
+
+        //     const patientId = report.patientId.toString();
+
+
+        //     if (!patientReportMap[patientId]) {
+        //         patientReportMap[patientId] = {
+        //             reportIds: [],
+        //             pendingTests: []
+        //         };
+        //     }
+
+
+        //     report.testReport
+        //         .filter(test => {
+
+        //             if (test.isReportSubmitted !== false) {
+        //                 return false;
+        //             }
+
+
+        //             // If no search, return all pending tests
+        //             if (!search || !search.trim()) {
+        //                 return true;
+        //             }
+
+
+        //             const searchValue =
+        //                 search.trim().toLowerCase();
+
+
+        //             return (
+        //                 test.testName
+        //                     ?.toLowerCase()
+        //                     .includes(searchValue) ||
+
+        //                 test.testCode
+        //                     ?.toLowerCase()
+        //                     .includes(searchValue)
+        //             );
+
+        //         })
+        //         .forEach(test => {
+
+        //             patientReportMap[patientId]
+        //                 .pendingTests
+        //                 .push({
+        //                     reportId: report.id,
+        //                     testReportId: test.testReportId,
+        //                     testName: test.testName,
+        //                     testCode: test.testCode
+        //                 });
+
+        //         });
+
+        // });
 
 
         // Important: only patients with matching tests
@@ -350,8 +412,6 @@ const getPatientsWithPendingReportsDb = async (labId, search = '') => {
 
             const patientId =
                 patient._id.toString();
-
-
             return {
                 ...patient.toObject(),
 
