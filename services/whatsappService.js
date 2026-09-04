@@ -40,6 +40,10 @@ const sendPatientRegistrationMessage = async (mobileNumber, patientName, labName
 
 const sendWhatsAppMessages = async (type, numbers, data) => {
     try {
+        const doctorContactNo = data.doctorContactNo.startsWith("+")
+        ? data.doctorContactNo
+        : `+${data.doctorContactNo}`;
+
         switch (type) {
 
             case "labReport":
@@ -50,9 +54,6 @@ const sendWhatsAppMessages = async (type, numbers, data) => {
                         ? mobileNumber
                         : `+${mobileNumber}`;
 
-                    const doctorContactNo = data.doctorContactNo.startsWith("+")
-                    ? data.doctorContactNo
-                    : `+${data.doctorContactNo}`;
 
                     // const endpoint =
                     //     `https://app.aibotick.com/api/v1/whatsapp/send/template`
@@ -73,6 +74,7 @@ const sendWhatsAppMessages = async (type, numbers, data) => {
                     //         template_header_media_url: data.pdfUrl
                     //     };
 
+                    //This is to send message to pateint // reports_new
                     const response = await axios.get(
                         "https://app.aibotick.com/api/v1/whatsapp/send/template",
                         {
@@ -80,7 +82,7 @@ const sendWhatsAppMessages = async (type, numbers, data) => {
                             apiToken: process.env.AIBOTICK_API_KEY,
                             phone_number_id: process.env.PHONE_NUMBER_ID,
                             template_id: 394626,
-                            phone_number: doctorContactNo,
+                            phone_number: phone,
                             "templateVariable-name-1": data.patientName,
                             "templateVariable-name-2": data.labName || "Queueless",
                             template_header_media_url: data.pdfUrl
@@ -95,7 +97,7 @@ const sendWhatsAppMessages = async (type, numbers, data) => {
                             apiToken: process.env.AIBOTICK_API_KEY,
                             phone_number_id: process.env.PHONE_NUMBER_ID,
                             template_id: 356610,
-                            phone_number: phone,
+                            phone_number: doctorContactNo,
                             "templateVariable-name-1": data.doctorName,
                             "templateVariable-name-2": data.patientName,
                             "templateVariable-name-3": data.labName || "Queueless",
