@@ -122,21 +122,61 @@ const getPatientsWithPendingReports = async (req, res) => {
     }
 };
 
+// const getPatientsWithSubmittedReports = async (req, res) => {
+//     try {
+//         const {
+//             filter = 'all',
+//             startDate,
+//             endDate,
+//         } = req.query;
+
+//         const result = await getPatientsWithSubmittedReportsDb(
+//             req.labId,
+//             {
+//                 filter,
+//                 startDate,
+//                 endDate
+//             }
+//         );
+
+//         return sendResponse(req, res, 200, result);
+
+//     } catch (error) {
+//         return sendResponse(req, res, 500, {
+//             Message: error.message
+//         });
+//     }
+// };
+
 const getPatientsWithSubmittedReports = async (req, res) => {
     try {
         const {
             filter = 'all',
             startDate,
-            endDate
+            endDate,
+            limit,
+            offset
         } = req.query;
+
+        const options = {
+            filter,
+            startDate,
+            endDate
+        };
+
+        // Add pagination only if limit is provided
+        if (limit !== undefined) {
+            options.limit = Number(limit);
+        }
+
+        // Add offset only if provided
+        if (offset !== undefined) {
+            options.offset = Number(offset);
+        }
 
         const result = await getPatientsWithSubmittedReportsDb(
             req.labId,
-            {
-                filter,
-                startDate,
-                endDate
-            }
+            options
         );
 
         return sendResponse(req, res, 200, result);

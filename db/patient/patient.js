@@ -524,207 +524,247 @@ const getPatientsWithPendingReportsDb = async (labId, search = '') => {
     }
 };
 
+// const getPatientsWithSubmittedReportsDb = async (
+//     labId,
+//     {
+//         filter = 'all',
+//         startDate,
+//         endDate
+//     } = {}
+// ) => {
+//     try {
+
+//         let dateFilter = {};
+
+//         const now = new Date();
+
+//         switch (filter) {
+
+//             case 'lastWeek': {
+//                 const lastWeek = new Date();
+
+//                 lastWeek.setDate(now.getDate() - 7);
+
+//                 dateFilter = {
+//                     createdAt: {
+//                         $gte: lastWeek,
+//                         $lte: now
+//                     }
+//                 };
+
+//                 break;
+//             }
+
+
+//             case 'lastMonth': {
+//                 const lastMonth = new Date();
+
+//                 lastMonth.setMonth(now.getMonth() - 1);
+
+//                 dateFilter = {
+//                     createdAt: {
+//                         $gte: lastMonth,
+//                         $lte: now
+//                     }
+//                 };
+
+//                 break;
+//             }
+
+
+//             case 'lastYear': {
+//                 const lastYear = new Date();
+
+//                 lastYear.setFullYear(now.getFullYear() - 1);
+
+//                 dateFilter = {
+//                     createdAt: {
+//                         $gte: lastYear,
+//                         $lte: now
+//                     }
+//                 };
+
+//                 break;
+//             }
+
+
+//             case 'custom': {
+
+//                 if (!startDate || !endDate) {
+//                     throw new Error(
+//                         'startDate and endDate are required for custom filter'
+//                     );
+//                 }
+
+//                 const customStartDate = new Date(startDate);
+//                 const customEndDate = new Date(endDate);
+
+//                 // Include the complete end date
+//                 customEndDate.setHours(23, 59, 59, 999);
+
+//                 dateFilter = {
+//                     createdAt: {
+//                         $gte: customStartDate,
+//                         $lte: customEndDate
+//                     }
+//                 };
+
+//                 break;
+//             }
+
+
+//             case 'all':
+//             default:
+//                 dateFilter = {};
+//         }
+
+
+//         const reportsWithSubmittedTests = await Report.find({
+//             'testReport.isReportSubmitted': true,
+//             labId,
+//             ...dateFilter
+//         }).select('patientId testReport');
+
+
+//         // Extract unique patient IDs
+//         const patientIds = [
+//             ...new Set(
+//                 reportsWithSubmittedTests.map(
+//                     report => report.patientId.toString()
+//                 )
+//             )
+//         ];
+
+
+//         const patientReportMap = {};
+
+
+//         reportsWithSubmittedTests.forEach(report => {
+
+//             const patientId = report.patientId.toString();
+
+//             if (!patientReportMap[patientId]) {
+//                 patientReportMap[patientId] = {
+//                     reportIds: [],
+//                     submittedTests: []
+//                 };
+//             }
+
+
+//             patientReportMap[patientId].reportIds.push(report._id);
+
+
+//             report.testReport
+//                 .filter(test => test.isReportSubmitted === true)
+//                 .forEach(test => {
+
+//                     patientReportMap[patientId].submittedTests.push({
+//                         reportId: report._id,
+//                         testReportId: test.testReportId,
+//                         testName: test.testName,
+//                         _rawParameters: test.testParameters || []
+//                     });
+
+//                 });
+
+//         });
+
+
+//         // Find patients
+//         const patients = await Patient.find({
+//             _id: { $in: patientIds },
+//             labId
+//         });
+
+
+//         const patientsWithReportIds = await Promise.all(
+//             patients.map(async patient => {
+
+//                 const patientId = patient._id.toString();
+
+//                 const mapEntry =
+//                     patientReportMap[patientId] || {
+//                         reportIds: [],
+//                         submittedTests: []
+//                     };
+
+
+//                 const submittedTests = await Promise.all(
+
+//                     mapEntry.submittedTests.map(
+//                         async ({ _rawParameters, ...rest }) => ({
+//                             ...rest,
+
+//                             testParameters:
+//                                 await resolveParameterRanges(
+//                                     _rawParameters,
+//                                     patient
+//                                 )
+//                         })
+//                     )
+
+//                 );
+
+
+//                 return {
+//                     ...patient.toObject(),
+//                     reportIds: mapEntry.reportIds,
+//                     submittedTests
+//                 };
+
+//             })
+//         );
+
+
+//         return patientsWithReportIds;
+
+//     } catch (error) {
+
+//         console.error(
+//             'Error in getPatientsWithSubmittedReportsDb:',
+//             error
+//         );
+
+//         throw error;
+//     }
+// };
+
 const getPatientsWithSubmittedReportsDb = async (
     labId,
     {
         filter = 'all',
         startDate,
-        endDate
-    } = {}
+        endDate,
+        limit,
+        offset
+    }
 ) => {
     try {
 
-        let dateFilter = {};
+        const query = {
+            labId,
+            'testReport.isReportSubmitted': true
+        };
 
-        const now = new Date();
+        // Your existing filter logic here...
 
-        switch (filter) {
+        let patientsQuery = Report.find(query);
 
-            case 'lastWeek': {
-                const lastWeek = new Date();
-
-                lastWeek.setDate(now.getDate() - 7);
-
-                dateFilter = {
-                    createdAt: {
-                        $gte: lastWeek,
-                        $lte: now
-                    }
-                };
-
-                break;
-            }
-
-
-            case 'lastMonth': {
-                const lastMonth = new Date();
-
-                lastMonth.setMonth(now.getMonth() - 1);
-
-                dateFilter = {
-                    createdAt: {
-                        $gte: lastMonth,
-                        $lte: now
-                    }
-                };
-
-                break;
-            }
-
-
-            case 'lastYear': {
-                const lastYear = new Date();
-
-                lastYear.setFullYear(now.getFullYear() - 1);
-
-                dateFilter = {
-                    createdAt: {
-                        $gte: lastYear,
-                        $lte: now
-                    }
-                };
-
-                break;
-            }
-
-
-            case 'custom': {
-
-                if (!startDate || !endDate) {
-                    throw new Error(
-                        'startDate and endDate are required for custom filter'
-                    );
-                }
-
-                const customStartDate = new Date(startDate);
-                const customEndDate = new Date(endDate);
-
-                // Include the complete end date
-                customEndDate.setHours(23, 59, 59, 999);
-
-                dateFilter = {
-                    createdAt: {
-                        $gte: customStartDate,
-                        $lte: customEndDate
-                    }
-                };
-
-                break;
-            }
-
-
-            case 'all':
-            default:
-                dateFilter = {};
+        // Apply pagination only when limit exists
+        if (limit !== undefined) {
+            patientsQuery = patientsQuery.limit(limit);
         }
 
+        // Apply offset only when offset exists
+        if (offset !== undefined) {
+            patientsQuery = patientsQuery.skip(offset || 0);
+        }
 
-        const reportsWithSubmittedTests = await Report.find({
-            'testReport.isReportSubmitted': true,
-            labId,
-            ...dateFilter
-        }).select('patientId testReport');
+        const reports = await patientsQuery;
 
-
-        // Extract unique patient IDs
-        const patientIds = [
-            ...new Set(
-                reportsWithSubmittedTests.map(
-                    report => report.patientId.toString()
-                )
-            )
-        ];
-
-
-        const patientReportMap = {};
-
-
-        reportsWithSubmittedTests.forEach(report => {
-
-            const patientId = report.patientId.toString();
-
-            if (!patientReportMap[patientId]) {
-                patientReportMap[patientId] = {
-                    reportIds: [],
-                    submittedTests: []
-                };
-            }
-
-
-            patientReportMap[patientId].reportIds.push(report._id);
-
-
-            report.testReport
-                .filter(test => test.isReportSubmitted === true)
-                .forEach(test => {
-
-                    patientReportMap[patientId].submittedTests.push({
-                        reportId: report._id,
-                        testReportId: test.testReportId,
-                        testName: test.testName,
-                        _rawParameters: test.testParameters || []
-                    });
-
-                });
-
-        });
-
-
-        // Find patients
-        const patients = await Patient.find({
-            _id: { $in: patientIds },
-            labId
-        });
-
-
-        const patientsWithReportIds = await Promise.all(
-            patients.map(async patient => {
-
-                const patientId = patient._id.toString();
-
-                const mapEntry =
-                    patientReportMap[patientId] || {
-                        reportIds: [],
-                        submittedTests: []
-                    };
-
-
-                const submittedTests = await Promise.all(
-
-                    mapEntry.submittedTests.map(
-                        async ({ _rawParameters, ...rest }) => ({
-                            ...rest,
-
-                            testParameters:
-                                await resolveParameterRanges(
-                                    _rawParameters,
-                                    patient
-                                )
-                        })
-                    )
-
-                );
-
-
-                return {
-                    ...patient.toObject(),
-                    reportIds: mapEntry.reportIds,
-                    submittedTests
-                };
-
-            })
-        );
-
-
-        return patientsWithReportIds;
+        return reports;
 
     } catch (error) {
-
-        console.error(
-            'Error in getPatientsWithSubmittedReportsDb:',
-            error
-        );
-
         throw error;
     }
 };
