@@ -740,29 +740,91 @@ const getPatientsWithSubmittedReportsDb = async (
     }
 ) => {
     try {
-
         const query = {
             labId,
             'testReport.isReportSubmitted': true
         };
 
-        // Your existing filter logic here...
+        // Date filter
+        if (startDate || endDate) {
+            query.createdAt = {};
 
-        let patientsQuery = Report.find(query);
+            if (startDate) {
+                query.createdAt.$gte = new Date(startDate);
+            }
 
-        // Apply pagination only when limit exists
-        if (limit !== undefined) {
-            patientsQuery = patientsQuery.limit(limit);
+            if (endDate) {
+                const end = new Date(endDate);
+
+                // Include the complete end date
+                end.setHours(23, 59, 59, 999);
+
+                query.createdAt.$lte = end;
+            }
         }
 
-        // Apply offset only when offset exists
-        if (offset !== undefined) {
-            patientsQuery = patientsQuery.skip(offset || 0);
+        /*
+         * Add your existing "filter" logic here.
+         *
+         * Example:
+         *
+         * if (filter === 'today') { ... }
+         * if (filter === 'week') { ... }
+         * if (filter === 'month') { ... }
+         */
+
+        // Base query
+        let patientsQuery = Report.find(query)
+            .sort({ createdAt: -1 });
+
+        // Apply pagination only if limit is provided
+        if (limit !== undefined && limit !== null) {
+            patientsQuery = patientsQuery.limit(Number(limit));
         }
 
+        // Apply offset only if provided
+        if (offset !== undefined && offset !== null) {
+            patientsQuery = patientsQuery.skip(Number(offset));
+        }
+
+        // Get reports
         const reports = await patientsQuery;
 
-        return reports;
+        // If pagination is not requested, return all data
+        if (limit === undefined && offset === undefined) {
+            return {
+                data: reports
+            };
+        }
+
+        // Get total count for pagination
+        const total = await Report.countDocuments(query);
+
+        const numericLimit =
+            limit !== undefined ? Number(limit) : total;
+
+        const numericOffset =
+            offset !== undefined ? Number(offset) : 0;
+
+        return {
+            data: reports,
+
+            pagination: {
+                total,
+                limit: numericLimit,
+                offset: numericOffset,
+
+                totalPages:
+                    numericLimit > 0
+                        ? Math.ceil(total / numericLimit)
+                        : 1,
+
+                currentPage:
+                    numericLimit > 0
+                        ? Math.floor(numericOffset / numericLimit) + 1
+                        : 1
+            }
+        };
 
     } catch (error) {
         throw error;
