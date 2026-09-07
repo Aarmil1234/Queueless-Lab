@@ -210,6 +210,8 @@ const generatePatientReportPDF = async (report) => {
             //     ["Ref. Doctor Contact", report.referredByContact]
             // ];
 
+            console.log("report", report);
+
             const registrationLines = [
                 ["Reg. Number", report.regNumber],
                 ["Reg. Date & Time", formatDateTime(report.regDateTime)],

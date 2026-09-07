@@ -458,7 +458,7 @@ const addPatientReport = async (req, res) => {
             referredBy: patient.referredByDoctor || "",
             referredByContact: patient.doctorContactNo || "",
             reportId: savedReport._id?.toString() || "",
-            reportDate: savedReport.createdAt || new Date(),
+            reportDate: savedReport.updatedAt || new Date(),
             testReport: testReportForPDF
         };
 
