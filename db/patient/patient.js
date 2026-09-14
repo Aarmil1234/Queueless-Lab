@@ -739,6 +739,208 @@ const getPatientsWithSubmittedReportsDb = async (
         offset
     } = {}
 ) => {
+    // try {
+
+    //     let dateFilter = {};
+
+    //     const now = new Date();
+
+    //     switch (filter) {
+
+    //         case 'lastWeek': {
+    //             const lastWeek = new Date();
+
+    //             lastWeek.setDate(now.getDate() - 7);
+
+    //             dateFilter = {
+    //                 createdAt: {
+    //                     $gte: lastWeek,
+    //                     $lte: now
+    //                 }
+    //             };
+
+    //             break;
+    //         }
+
+
+    //         case 'lastMonth': {
+    //             const lastMonth = new Date();
+
+    //             lastMonth.setMonth(now.getMonth() - 1);
+
+    //             dateFilter = {
+    //                 createdAt: {
+    //                     $gte: lastMonth,
+    //                     $lte: now
+    //                 }
+    //             };
+
+    //             break;
+    //         }
+
+
+    //         case 'lastYear': {
+    //             const lastYear = new Date();
+
+    //             lastYear.setFullYear(now.getFullYear() - 1);
+
+    //             dateFilter = {
+    //                 createdAt: {
+    //                     $gte: lastYear,
+    //                     $lte: now
+    //                 }
+    //             };
+
+    //             break;
+    //         }
+
+
+    //         case 'custom': {
+
+    //             if (!startDate || !endDate) {
+    //                 throw new Error(
+    //                     'startDate and endDate are required for custom filter'
+    //                 );
+    //             }
+
+    //             const customStartDate = new Date(startDate);
+    //             const customEndDate = new Date(endDate);
+
+    //             // Include the complete end date
+    //             customEndDate.setHours(23, 59, 59, 999);
+
+    //             dateFilter = {
+    //                 createdAt: {
+    //                     $gte: customStartDate,
+    //                     $lte: customEndDate
+    //                 }
+    //             };
+
+    //             break;
+    //         }
+
+
+    //         case 'all':
+    //         default:
+    //             dateFilter = {};
+    //     }
+
+
+    //     const reportsWithSubmittedTests = await Report.find({
+    //         'testReport.isReportSubmitted': true,
+    //         labId,
+    //         ...dateFilter
+    //     }).select('patientId testReport');
+
+
+    //     // Extract unique patient IDs
+    //     const patientIds = [
+    //         ...new Set(
+    //             reportsWithSubmittedTests.map(
+    //                 report => report.patientId.toString()
+    //             )
+    //         )
+    //     ];
+
+
+    //     const patientReportMap = {};
+
+
+    //     reportsWithSubmittedTests.forEach(report => {
+
+    //         const patientId = report.patientId.toString();
+
+    //         if (!patientReportMap[patientId]) {
+    //             patientReportMap[patientId] = {
+    //                 reportIds: [],
+    //                 submittedTests: []
+    //             };
+    //         }
+
+
+    //         patientReportMap[patientId].reportIds.push(report._id);
+
+
+    //         report.testReport
+    //             .filter(test => test.isReportSubmitted === true)
+    //             .forEach(test => {
+
+    //                 patientReportMap[patientId].submittedTests.push({
+    //                     reportId: report._id,
+    //                     testReportId: test.testReportId,
+    //                     testName: test.testName,
+    //                     _rawParameters: test.testParameters || []
+    //                 });
+
+    //             });
+
+    //     });
+
+
+    //     // Find patients
+    //     let patientsQuery = Patient.find({
+    //         _id: { $in: patientIds },
+    //         labId
+    //     });
+
+
+    //     // Apply limit only if provided
+    //     if (limit !== undefined) {
+    //         patientsQuery = patientsQuery.limit(Number(limit));
+    //     }
+
+
+    //     // Apply offset only if provided
+    //     if (offset !== undefined) {
+    //         patientsQuery = patientsQuery.skip(Number(offset));
+    //     }
+
+
+    //     const patients = await patientsQuery;
+
+
+    //     const patientsWithReportIds = await Promise.all(
+    //         patients.map(async patient => {
+
+    //             const patientId = patient._id.toString();
+
+    //             const mapEntry =
+    //                 patientReportMap[patientId] || {
+    //                     reportIds: [],
+    //                     submittedTests: []
+    //                 };
+
+
+    //             const submittedTests = await Promise.all(
+
+    //                 mapEntry.submittedTests.map(
+    //                     async ({ _rawParameters, ...rest }) => ({
+    //                         ...rest,
+
+    //                         testParameters:
+    //                             await resolveParameterRanges(
+    //                                 _rawParameters,
+    //                                 patient
+    //                             )
+    //                     })
+    //                 )
+
+    //             );
+
+
+    //             return {
+    //                 ...patient.toObject(),
+    //                 reportIds: mapEntry.reportIds,
+    //                 submittedTests
+    //             };
+
+    //         })
+    //     );
+
+    //     return patientsWithReportIds;
+
+    // }
+
     try {
 
         let dateFilter = {};
@@ -747,9 +949,32 @@ const getPatientsWithSubmittedReportsDb = async (
 
         switch (filter) {
 
-            case 'lastWeek': {
-                const lastWeek = new Date();
+            // =========================
+            // TODAY
+            // =========================
+            case 'today': {
+                const startOfToday = new Date(now);
+                startOfToday.setHours(0, 0, 0, 0);
 
+                const endOfToday = new Date(now);
+                endOfToday.setHours(23, 59, 59, 999);
+
+                dateFilter = {
+                    createdAt: {
+                        $gte: startOfToday,
+                        $lte: endOfToday
+                    }
+                };
+
+                break;
+            }
+
+
+            // =========================
+            // LAST 7 DAYS
+            // =========================
+            case 'lastWeek': {
+                const lastWeek = new Date(now);
                 lastWeek.setDate(now.getDate() - 7);
 
                 dateFilter = {
@@ -763,15 +988,36 @@ const getPatientsWithSubmittedReportsDb = async (
             }
 
 
+            // =========================
+            // LAST MONTH
+            // Previous calendar month
+            // Example: September -> August
+            // =========================
             case 'lastMonth': {
-                const lastMonth = new Date();
+                const startOfLastMonth = new Date(
+                    now.getFullYear(),
+                    now.getMonth() - 1,
+                    1,
+                    0,
+                    0,
+                    0,
+                    0
+                );
 
-                lastMonth.setMonth(now.getMonth() - 1);
+                const startOfThisMonth = new Date(
+                    now.getFullYear(),
+                    now.getMonth(),
+                    1,
+                    0,
+                    0,
+                    0,
+                    0
+                );
 
                 dateFilter = {
                     createdAt: {
-                        $gte: lastMonth,
-                        $lte: now
+                        $gte: startOfLastMonth,
+                        $lt: startOfThisMonth
                     }
                 };
 
@@ -779,8 +1025,48 @@ const getPatientsWithSubmittedReportsDb = async (
             }
 
 
+            // =========================
+            // THIS MONTH
+            // Current calendar month
+            // Example: September 1 -> September 30
+            // =========================
+            case 'thisMonth': {
+                const startOfThisMonth = new Date(
+                    now.getFullYear(),
+                    now.getMonth(),
+                    1,
+                    0,
+                    0,
+                    0,
+                    0
+                );
+
+                const endOfThisMonth = new Date(
+                    now.getFullYear(),
+                    now.getMonth() + 1,
+                    0,
+                    23,
+                    59,
+                    59,
+                    999
+                );
+
+                dateFilter = {
+                    createdAt: {
+                        $gte: startOfThisMonth,
+                        $lte: endOfThisMonth
+                    }
+                };
+
+                break;
+            }
+
+
+            // =========================
+            // LAST YEAR
+            // =========================
             case 'lastYear': {
-                const lastYear = new Date();
+                const lastYear = new Date(now);
 
                 lastYear.setFullYear(now.getFullYear() - 1);
 
@@ -795,6 +1081,9 @@ const getPatientsWithSubmittedReportsDb = async (
             }
 
 
+            // =========================
+            // CUSTOM DATE
+            // =========================
             case 'custom': {
 
                 if (!startDate || !endDate) {
@@ -804,9 +1093,9 @@ const getPatientsWithSubmittedReportsDb = async (
                 }
 
                 const customStartDate = new Date(startDate);
-                const customEndDate = new Date(endDate);
+                customStartDate.setHours(0, 0, 0, 0);
 
-                // Include the complete end date
+                const customEndDate = new Date(endDate);
                 customEndDate.setHours(23, 59, 59, 999);
 
                 dateFilter = {
@@ -820,6 +1109,9 @@ const getPatientsWithSubmittedReportsDb = async (
             }
 
 
+            // =========================
+            // ALL
+            // =========================
             case 'all':
             default:
                 dateFilter = {};
@@ -900,6 +1192,7 @@ const getPatientsWithSubmittedReportsDb = async (
 
 
         const patientsWithReportIds = await Promise.all(
+
             patients.map(async patient => {
 
                 const patientId = patient._id.toString();
@@ -940,7 +1233,8 @@ const getPatientsWithSubmittedReportsDb = async (
 
         return patientsWithReportIds;
 
-    } catch (error) {
+    }
+     catch (error) {
 
         console.error(
             'Error in getPatientsWithSubmittedReportsDb:',
