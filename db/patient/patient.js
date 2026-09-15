@@ -973,7 +973,7 @@ const getPatientsWithSubmittedReportsDb = async (
             // =========================
             // LAST 7 DAYS
             // =========================
-            case 'lastWeek': {
+            case 'thisWeek': {
                 const lastWeek = new Date(now);
                 lastWeek.setDate(now.getDate() - 7);
 
@@ -986,7 +986,6 @@ const getPatientsWithSubmittedReportsDb = async (
 
                 break;
             }
-
 
             // =========================
             // LAST MONTH
