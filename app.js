@@ -5,6 +5,7 @@ const db = require('./db/db.js');
 require('dotenv').config();
 
 const mainRouter = require('./routes/routes.js');
+const superAdminRoutes = require("./routes/superAdminRoutes");
 
 const app = express();
 
@@ -18,7 +19,8 @@ app.use(
   '/uploads',
   express.static('uploads')
 );
-app.use('/api', mainRouter );
+app.use('/api', mainRouter);
+app.use('/api/super-admin', superAdminRoutes);
 const server = http.createServer(app);
 
 // === Database Connection ===
