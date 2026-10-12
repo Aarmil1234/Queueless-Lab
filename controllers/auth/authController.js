@@ -28,10 +28,8 @@ async function login(req, res) {
 
         // Find laboratory owner
         const owner = await LaboratoryOwner
-            .findOne({
-                labMobileNumber,
-                isActive: true
-            })
+            .findOne({ labMobileNumber })
+            .sort({ isActive: -1 }) // labMobileNumber isn't unique; prefer the active lab
             .select('+password');
 
         // Validate user and password
@@ -39,6 +37,14 @@ async function login(req, res) {
             return sendResponse(req, res, 401, {
                 success: false,
                 message: 'Invalid credentials'
+            });
+        }
+
+        // Checked after the password so disabled accounts can't be probed
+        if (!owner.isActive) {
+            return sendResponse(req, res, 403, {
+                success: false,
+                message: 'Your lab account has been deactivated. Please contact support.'
             });
         }
 

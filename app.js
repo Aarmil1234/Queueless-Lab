@@ -5,7 +5,7 @@ const db = require('./db/db.js');
 require('dotenv').config();
 
 const mainRouter = require('./routes/routes.js');
-const superAdminRoutes = require("./routes/superAdminRoutes");
+const superAdminRoutes = require("./routes/superadmin/superAdminRoutes");
 
 const app = express();
 
