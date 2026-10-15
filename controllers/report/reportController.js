@@ -158,6 +158,7 @@ const addPatientReportOld = async (req, res) => {
         });
         
         const pdfUrl = uploadResult.secure_url;
+        console.log("======pdfUrl====", pdfUrl);
 
         const pdfMetadataResult = await saveReportPdfMetadataDb(savedReport._id, labId, {
             pdfUrl
