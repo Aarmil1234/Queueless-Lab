@@ -2,33 +2,85 @@ const axios = require("axios");
 const cloudinary = require("cloudinary").v2;
 const fs = require("fs");
 
-const AIBOTIC_URL = "https://app.aibotick.com/api/v1/whatsapp/";
+const ENGAGIFY_MESSAGES_URL = "https://app.engagify.co.in/api/v1/messages";
+const DEFAULT_COUNTRY_CODE = "+91";
+const TEMPLATE_LANGUAGE = "en_US";
+
+// Splits a stored number ("919876543210", "+91 98765 43210", "9876543210")
+// into the { countryCode, phoneNumber } shape Engagify expects.
+const splitPhoneNumber = (mobileNumber) => {
+    const digits = String(mobileNumber || "").replace(/\D/g, "");
+
+    if (!digits) {
+        throw new Error("Mobile number is required");
+    }
+
+    if (digits.length <= 10) {
+        return { countryCode: DEFAULT_COUNTRY_CODE, phoneNumber: digits };
+    }
+
+    return {
+        countryCode: `+${digits.slice(0, digits.length - 10)}`,
+        phoneNumber: digits.slice(-10)
+    };
+};
+
+// Sends one APPROVED template to one recipient.
+// bodyVariables is an ordered array mapped to {{1}}, {{2}}...
+// documentUrl fills a DOCUMENT header (required by reports_new / doc_report).
+const sendTemplateMessage = async ({ mobileNumber, name, templateName, bodyVariables = [], documentUrl, documentName }) => {
+    const variables = {};
+
+    if (bodyVariables.length) {
+        variables.body = bodyVariables.map((value) => ({
+            source: "STATIC",
+            value: String(value ?? "")
+        }));
+    }
+
+    if (documentUrl) {
+        variables.headerMedia = {
+            type: "DOCUMENT",
+            link: documentUrl,
+            filename: documentName || "Report.pdf"
+        };
+    }
+
+    const payload = {
+        to: { ...splitPhoneNumber(mobileNumber), ...(name && { name }) },
+        templateName,
+        language: TEMPLATE_LANGUAGE,
+        ...(Object.keys(variables).length && { variables })
+    };
+
+    const response = await axios.post(ENGAGIFY_MESSAGES_URL, payload, {
+        headers: {
+            Authorization: `Bearer ${process.env.ENGAGIFY_API_KEY}`,
+            "Content-Type": "application/json"
+        }
+    });
+
+    if (response.data?.errorCode || response.data?.status === "FAILED") {
+        throw new Error(
+            `Engagify ${templateName} failed: ${response.data.errorMessage || response.data.errorCode}`
+        );
+    }
+
+    return response.data;
+};
 
 const sendPatientRegistrationMessage = async (mobileNumber, patientName, labName) => {
     try {
-        const phone = mobileNumber && mobileNumber.startsWith("+")
-            ? mobileNumber
-            : `+${mobileNumber}`;
-
-        const apiToken = process.env.AIBOTICK_API_KEY;
-        const phoneNumberId = process.env.PHONE_NUMBER_ID;
-
-        const response = await axios.get(
-            "https://app.aibotick.com/api/v1/whatsapp/send/template",
-            {
-                params: {
-                    apiToken,
-                    phone_number_id: phoneNumberId,
-                    template_id: 356612,
-                    phone_number: phone,
-                    "templateVariable-name-1": patientName,
-                    "templateVariable-name-2": labName || "Queueless",
-                    "templateVariable-name-3": labName || "Queueless"
-                }
-            }
-        );
-
-        return response.data;
+        return await sendTemplateMessage({
+            mobileNumber,
+            name: patientName,
+            templateName: "lab_reports",
+            bodyVariables: [
+                patientName,
+                labName || "Queueless",
+                labName || "Queueless"
+            ]
+        });
     } catch (error) {
         console.error(
             "WhatsApp registration message error:",
@@ -40,71 +92,35 @@ const sendPatientRegistrationMessage = async (mobileNumber, patientName, labName
 
 const sendWhatsAppMessages = async (type, numbers, data) => {
     try {
-        const doctorContactNo = data.doctorContactNo.startsWith("+")
-        ? data.doctorContactNo
-        : `+${data.doctorContactNo}`;
-
         switch (type) {
 
             case "labReport":
 
                 for (const mobileNumber of numbers) {
 
-                    const phone = mobileNumber.startsWith("+")
-                        ? mobileNumber
-                        : `+${mobileNumber}`;
+                    // This is to send message to patient
+                    await sendTemplateMessage({
+                        mobileNumber,
+                        name: data.patientName,
+                        templateName: "reports_new",
+                        bodyVariables: [
+                            data.patientName,
+                            data.labName || "Queueless"
+                        ],
+                        documentUrl: data.pdfUrl
+                    });
 
-
-                    // const endpoint =
-                    //     `https://app.aibotick.com/api/v1/whatsapp/send/template`
-                    //      +
-                    //     `?apiToken=${encodeURIComponent(process.env.AIBOTICK_API_KEY)}` +
-                    //     `&phone_number_id=${process.env.PHONE_NUMBER_ID}` +
-                    //     `&template_id=394626` +
-                    //     `&phone_number=${encodeURIComponent(phone)}` +
-                    //     `&templateVariable-name-1=${encodeURIComponent(data.patientName)}` +
-                    //     `&template_header_media_url=${encodeURIComponent(data.pdfUrl)}`;
-
-                    //     const payload = {
-                    //         apiToken: process.env.AIBOTICK_API_KEY,
-                    //         phone_number_id: process.env.PHONE_NUMBER_ID,
-                    //         template_id: 394626,
-                    //         phone_number: phone,
-                    //         "templateVariable-name-1": data.patientName,
-                    //         template_header_media_url: data.pdfUrl
-                    //     };
-
-                    //This is to send message to pateint // reports_new
-                    const response = await axios.get(
-                        "https://app.aibotick.com/api/v1/whatsapp/send/template",
-                        {
-                            params: {
-                            apiToken: process.env.AIBOTICK_API_KEY,
-                            phone_number_id: process.env.PHONE_NUMBER_ID,
-                            template_id: 394626,
-                            phone_number: phone,
-                            "templateVariable-name-1": data.patientName,
-                            "templateVariable-name-2": data.labName || "Queueless",
-                            template_header_media_url: data.pdfUrl
-                            }
-                        }
-                    );
-
-                    const drResponse = await axios.get(
-                        "https://app.aibotick.com/api/v1/whatsapp/send/template",
-                        {
-                            params: {
-                            apiToken: process.env.AIBOTICK_API_KEY,
-                            phone_number_id: process.env.PHONE_NUMBER_ID,
-                            template_id: 356610,
-                            phone_number: doctorContactNo,
-                            "templateVariable-name-1": data.doctorName,
-                            "templateVariable-name-2": data.patientName,
-                            "templateVariable-name-3": data.labName || "Queueless",
-                            template_header_media_url: data.pdfUrl
-                            }
-                        }
-                    );
+                    await sendTemplateMessage({
+                        mobileNumber: data.doctorContactNo,
+                        name: data.doctorName,
+                        templateName: "doc_report",
+                        bodyVariables: [
+                            data.doctorName,
+                            data.patientName,
+                            data.labName || "Queueless"
+                        ],
+                        documentUrl: data.pdfUrl
+                    });
                 }
 
                 break;
